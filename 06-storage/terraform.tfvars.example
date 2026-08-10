@@ -1,0 +1,12 @@
+# terraform.tfvars.example — copy to terraform.tfvars and fill values
+avdLocation           = "australiaeast"
+prefix                = "poc1"
+environment           = "prod"
+spoke_subscription_id = "00000000-0000-0000-0000-000000000000"
+hub_subscription_id   = "00000000-0000-0000-0000-000000000001"
+hub_dns_zone_rg       = "rg-privatedns"
+# From module 01 output: rg_storage_name
+rg_storage_name       = "rg-avd-poc1-prod-australiaeast-storage"
+# From module 02 outputs: pesubnet_id, vnet_id
+pesubnet_id           = "/subscriptions/.../subnets/snet-avd-pe-austr-poc1-001"
+spoke_vnet_id         = "/subscriptions/.../virtualNetworks/vnet-avd-austr-poc1-001"

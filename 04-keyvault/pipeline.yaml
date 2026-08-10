@@ -1,0 +1,29 @@
+# trigger: none
+trigger:
+ branches:
+   include:
+     - main
+ paths:
+   include:
+     - avd-terraform4/04-keyvault/*
+
+pool:
+  name: devopspool1
+  #name: Azure Pipelines
+
+stages:
+  - template: ../../common/terraform-plan-apply.yml
+    parameters:
+      environmentName:            'dev'
+      azureServiceConnection:     'tenant-root'
+      deploymentSubscriptionId:   'e4ea360b-bf76-47bc-bb09-81bd23faad9e'
+      backendStateKey:            'avd-terraform4-04-keyvault.tfstate'
+      terraformWorkingDirectory:  '$(System.DefaultWorkingDirectory)/avd-terraform4/04-keyvault'
+      
+      terraformVarFile:           '../dev.tfvars'
+      tfVariablesFile:            '../variables.tf'    
+      stateSubscriptionId:        'eb60ae18-0772-4810-8616-c189bb571c25'
+      backendResourceGroupName:   'rg-tfstore'
+      backendStorageAccountName:  'tfstore101'
+
+      

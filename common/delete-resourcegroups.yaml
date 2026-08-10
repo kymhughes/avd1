@@ -1,0 +1,43 @@
+trigger: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  serviceConnection: 'tenant-root'
+
+steps:
+- task: AzureCLI@2
+  displayName: Delete Resource Groups
+  inputs:
+    azureSubscription: $(serviceConnection)
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      KEEP_LIST=(
+        "rg-hub-aus"
+      )
+      az account set --subscription "kh-sub2"
+      
+      echo "Keeping resource groups:"
+      printf ' - %s\n' "${KEEP_LIST[@]}"
+
+      mapfile -t ALL_RGS < <(az group list --query "[].name" -o tsv)
+
+      for RG in "${ALL_RGS[@]}"; do
+        KEEP=false
+
+        for KEEP_RG in "${KEEP_LIST[@]}"; do
+          if [[ "$RG" == "$KEEP_RG" ]]; then
+            KEEP=true
+            break
+          fi
+        done
+
+        if [[ "$KEEP" == "true" ]]; then
+          echo "Keeping: $RG"
+        else
+          echo "Deleting: $RG"
+          az group delete --name "$RG" --yes --no-wait
+        fi
+      done

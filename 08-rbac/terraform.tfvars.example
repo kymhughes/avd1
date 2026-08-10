@@ -1,0 +1,13 @@
+# terraform.tfvars.example — copy to terraform.tfvars and fill values
+tenant_id             = "d4b3cf5c-e7a8-4dbb-8d89-603066a7f185"
+spoke_subscription_id = "00000000-0000-0000-0000-000000000000"
+user_group_name       = "avdusergrp"
+# From module 05 output: application_group_id
+application_group_id  = "/subscriptions/.../applicationGroups/vdag-poc1-prod-australiaeast"
+# From module 01 output: rg_compute_id
+rg_compute_id         = "/subscriptions/.../resourceGroups/rg-avd-poc1-prod-australiaeast-pool-compute"
+# From module 06 output: storage_account_id
+storage_account_id    = "/subscriptions/.../storageAccounts/stavdpoc1xxxx"
+# AVD service principal object ID — get with:
+# az ad sp list --display-name "Windows Virtual Desktop" --query "[].id" -o tsv
+scaling_plan_service_principal_id = "00000000-0000-0000-0000-000000000000"
