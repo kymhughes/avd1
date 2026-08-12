@@ -11,17 +11,40 @@ pool:
   name: devopspool1
   #name: Azure Pipelines
 
+variables:
+  tfFolder: 00-inplace-network
+
+parameters:
+  - name: doPause
+    type: boolean
+    default: false
+  - name: doDestroy
+    type: boolean
+    default: false
+  - name: env
+    displayName: Select environment
+    type: string
+    default: 'npd'
+    values:
+      - npd
+      - tst
+      - prd
+
 stages:
   - template: ../_common/terraform-plan-apply.yml
     parameters:
-      environmentName:            'dev'
+      environmentName:            '${{ parameters.env }}'
       azureServiceConnection:     'sp-avd-lab'
       deploymentSubscriptionId:   'e4ea360b-bf76-47bc-bb09-81bd23faad9e'
-      backendStateKey:            'avd-terraform4-00-inplace-network.tfstate'
+      backendStateKey:            '${{ parameters.env }}-$(tfFolder).tfstate'
 
-      terraformVarFile:           '../dev.tfvars'
+      doPause:                    '${{ parameters.doPause }}'
+      doDestroy:                  '${{ parameters.doDestroy }}'
+      env:                        '${{ parameters.env }}'
+
+      terraformVarFile:           '../${{ parameters.env }}.tfvars'
       tfVariablesFile:            '../variables.tf'    
-      terraformWorkingDirectory:  '$(System.DefaultWorkingDirectory)/avd-terraform4/00-inplace-network'
+      terraformWorkingDirectory:  '$(System.DefaultWorkingDirectory)/$(tfFolder)'
       stateSubscriptionId:        'eb60ae18-0772-4810-8616-c189bb571c25'
       backendResourceGroupName:   'rg-tfstore'
       backendStorageAccountName:  'tfstore101'
