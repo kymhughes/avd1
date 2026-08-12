@@ -15,7 +15,7 @@ stages:
   - template: ../../common/terraform-plan-apply.yml
     parameters:
       environmentName:            'dev'
-      azureServiceConnection:     'tenant-root'
+      azureServiceConnection:     'sp-avd-lab'
       deploymentSubscriptionId:   'e4ea360b-bf76-47bc-bb09-81bd23faad9e'
       backendStateKey:            'avd-terraform4-00-inplace-network.tfstate'
 

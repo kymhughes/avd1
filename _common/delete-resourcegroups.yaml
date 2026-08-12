@@ -4,7 +4,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  serviceConnection: 'tenant-root'
+  serviceConnection: 'sp-avd-lab'
 
 steps:
 - task: AzureCLI@2
