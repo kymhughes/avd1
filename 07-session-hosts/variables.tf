@@ -45,9 +45,9 @@ variable "local_admin_username" {
   default     = "avdadmin"
   description = "Local admin username"
 }
-variable "vm_password"           {
-  type      = string
-  sensitive = true
+variable "vm_password" {
+  type        = string
+  sensitive   = true
   description = "Local admin password (from module 04: vm_password_value) — use pipeline secret variable"
 }
 variable "hostpool_name" {
@@ -56,11 +56,11 @@ variable "hostpool_name" {
   nullable    = true
   description = "Optional override for host pool name. If not set, read from 05-avd-hostpool state."
 }
-variable "registration_token"    {
-  type      = string
-  sensitive = true
-  default   = null
-  nullable  = true
+variable "registration_token" {
+  type        = string
+  sensitive   = true
+  default     = null
+  nullable    = true
   description = "Optional override for AVD registration token. If not set, read automatically from 05-avd-hostpool state."
 }
 variable "publisher" {

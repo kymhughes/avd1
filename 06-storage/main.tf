@@ -38,17 +38,17 @@ resource "azurerm_user_assigned_identity" "storage_mi" {
 
 # ── FSLogix Storage Account ───────────────────────────────────────────────────
 resource "azurerm_storage_account" "fslogix" {
-  provider                        = azurerm.spoke
-  name                            = local.storage_name
-  resource_group_name             = var.rg_storage_name
-  location                        = var.avdLocation
-  account_tier                    = "Premium"
-  account_kind                    = "FileStorage"
-  account_replication_type        = "LRS"
-  shared_access_key_enabled       = false
-  public_network_access_enabled   = false
-  min_tls_version                 = "TLS1_2"
-  tags                            = local.tags
+  provider                      = azurerm.spoke
+  name                          = local.storage_name
+  resource_group_name           = var.rg_storage_name
+  location                      = var.avdLocation
+  account_tier                  = "Premium"
+  account_kind                  = "FileStorage"
+  account_replication_type      = "LRS"
+  shared_access_key_enabled     = false
+  public_network_access_enabled = false
+  min_tls_version               = "TLS1_2"
+  tags                          = local.tags
 
   azure_files_authentication {
     directory_type = "AADKERB"
@@ -67,11 +67,11 @@ resource "azurerm_storage_account" "fslogix" {
 
 # ── FSLogix File Share ────────────────────────────────────────────────────────
 resource "azurerm_storage_share" "fslogix" {
-  provider             = azurerm.spoke
-  name                 = "fslogix"
-  storage_account_id   = azurerm_storage_account.fslogix.id
-  quota                = var.fslogix_share_quota_gb
-  enabled_protocol     = "SMB"
+  provider           = azurerm.spoke
+  name               = "fslogix"
+  storage_account_id = azurerm_storage_account.fslogix.id
+  quota              = var.fslogix_share_quota_gb
+  enabled_protocol   = "SMB"
 }
 
 # ── Private DNS Zone for Files (pre-existing in hub) ─────────────────────
@@ -125,10 +125,10 @@ resource "azurerm_private_endpoint" "file_pe" {
 
 # ── Network Rules — deny all except PE subnet ─────────────────────────────────
 resource "azurerm_storage_account_network_rules" "fslogix_rules" {
-  provider           = azurerm.spoke
-  storage_account_id = azurerm_storage_account.fslogix.id
-  default_action     = "Deny"
-  bypass             = ["AzureServices"]
+  provider                   = azurerm.spoke
+  storage_account_id         = azurerm_storage_account.fslogix.id
+  default_action             = "Deny"
+  bypass                     = ["AzureServices"]
   virtual_network_subnet_ids = [var.pesubnet_id]
-  depends_on = [azurerm_private_endpoint.file_pe]
+  depends_on                 = [azurerm_private_endpoint.file_pe]
 }

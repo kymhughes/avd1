@@ -20,7 +20,7 @@ data "terraform_remote_state" "avd_hostpool" {
 }
 
 locals {
-  vm_name_prefix    = "${var.prefix}-avd-${var.app_name}-vm"
+  vm_name_prefix = "${var.prefix}-avd-${var.app_name}-vm"
   # Use variable override if provided, otherwise read from module 05 state
   hostpool_name      = coalesce(var.hostpool_name, data.terraform_remote_state.avd_hostpool.outputs.hostpool_name)
   registration_token = coalesce(var.registration_token, data.terraform_remote_state.avd_hostpool.outputs.registration_token)
@@ -76,17 +76,17 @@ resource "azurerm_network_interface" "avd_vm_nic" {
 
 # ── Windows Virtual Machines ──────────────────────────────────────────────────
 resource "azurerm_windows_virtual_machine" "avd_vm" {
-  count                    = var.rdsh_count
-  name                     = "${local.vm_name_prefix}-${count.index + 1}"
+  count = var.rdsh_count
+  name  = "${local.vm_name_prefix}-${count.index + 1}"
   # computer_name must be ≤15 chars (Windows limit); derived independently of the VM name.
-  computer_name            = "${substr(var.prefix,0,4)}${substr(var.app_name,0,4)}vm${count.index + 1}"
-  resource_group_name      = var.rg_compute_name
-  location                 = var.avdLocation
-  size                     = var.vm_size
-  admin_username           = var.local_admin_username
-  admin_password           = var.vm_password
+  computer_name              = "${substr(var.prefix, 0, 4)}${substr(var.app_name, 0, 4)}vm${count.index + 1}"
+  resource_group_name        = var.rg_compute_name
+  location                   = var.avdLocation
+  size                       = var.vm_size
+  admin_username             = var.local_admin_username
+  admin_password             = var.vm_password
   encryption_at_host_enabled = true
-  tags                     = local.tags
+  tags                       = local.tags
 
   network_interface_ids = [
     azurerm_network_interface.avd_vm_nic[count.index].id
@@ -114,10 +114,10 @@ resource "azurerm_windows_virtual_machine" "avd_vm" {
     # To intentionally replace a VM, taint it first: terraform taint <resource>
     ignore_changes = [
       admin_password,
-      name,          # prefix changes would rename the VM (ForceNew)
-      computer_name, # ForceNew — set once at creation
-      os_disk,       # disk name contains the VM name (ForceNew)
-      source_image_reference,  # image changes must not force VM recreation
+      name,                   # prefix changes would rename the VM (ForceNew)
+      computer_name,          # ForceNew — set once at creation
+      os_disk,                # disk name contains the VM name (ForceNew)
+      source_image_reference, # image changes must not force VM recreation
     ]
   }
 }

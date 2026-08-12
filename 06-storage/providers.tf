@@ -19,16 +19,16 @@ terraform {
 }
 
 provider "azurerm" {
-  alias           = "spoke"
-  subscription_id = var.spoke_subscription_id
+  alias                           = "spoke"
+  subscription_id                 = var.spoke_subscription_id
   storage_use_azuread             = true
   resource_provider_registrations = "none"
   features {}
 }
 
 provider "azurerm" {
-  alias           = "hub"
-  subscription_id = var.hub_subscription_id
+  alias                           = "hub"
+  subscription_id                 = var.hub_subscription_id
   storage_use_azuread             = true
   resource_provider_registrations = "none"
   features {}
