@@ -5,7 +5,7 @@ trigger: none
 #      - main
 #  paths:
 #    include:
-#      - avd-terraform4/00-inplace-network/*
+#      - 00-inplace-network/*
 
 pool:
   name: devopspool1
