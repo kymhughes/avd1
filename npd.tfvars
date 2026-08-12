@@ -78,7 +78,21 @@ subnets = {
     address_prefixes                  = ["172.17.101.0/28"]
     private_subnet_enabled            = true
     private_endpoint_network_policies = "Enabled"
-    nsg                               = { create = true }
+    nsg = {
+      #existing_network_security_group_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-shared-network/providers/Microsoft.Network/networkSecurityGroups/nsg-shared"
+      create = true
+      security_rules = {
+        "Allow-HTTPS-Inbound" = {
+          priority                   = 100
+          direction                  = "Inbound"
+          access                     = "Allow"
+          protocol                   = "Tcp"
+          source_address_prefix      = "VirtualNetwork"
+          destination_address_prefix = "*"
+          destination_port_range     = "443"
+        }
+      }
+    }
   }
 
   "snet-ietm-002" = {
@@ -91,36 +105,6 @@ subnets = {
 
   "snet-ietm-002-pe" = {
     address_prefixes                  = ["172.17.101.16/28"]
-    private_subnet_enabled            = true
-    private_endpoint_network_policies = "Enabled"
-    nsg                               = { create = true }
-  }
-
-  "snet-ietm-003" = {
-    name                              = "ietm003"
-    address_prefixes                  = ["172.17.100.32/28"]
-    private_subnet_enabled            = true
-    private_endpoint_network_policies = "Disabled"
-    nsg                               = { create = true }
-  }
-
-  "snet-ietm-003-pe" = {
-    address_prefixes                  = ["172.17.101.32/28"]
-    private_subnet_enabled            = true
-    private_endpoint_network_policies = "Enabled"
-    nsg                               = { create = true }
-  }
-
-  "snet-ietm-004" = {
-    name                              = "ietm004"
-    address_prefixes                  = ["172.17.100.48/28"]
-    private_subnet_enabled            = true
-    private_endpoint_network_policies = "Disabled"
-    nsg                               = { create = true }
-  }
-
-  "snet-ietm-004-pe" = {
-    address_prefixes                  = ["172.17.101.48/28"]
     private_subnet_enabled            = true
     private_endpoint_network_policies = "Enabled"
     nsg                               = { create = true }
