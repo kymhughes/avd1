@@ -1,33 +1,18 @@
 # ── Key Vault — CMK Key, VM Password Secret, Private Endpoint ─────────────────
-# Depends on: 01-resource-groups (rg_service_objects_name), 02-network (pesubnet_id)
-# Provides:   keyvault_id, keyvault_uri, vm_password_value → consumed by 07-session-hosts
-#
-# NOTE: On first run (bootstrap), the KV firewall blocks the Terraform runner.
-#       Use:  terraform apply -refresh=false
-#       The http provider auto-adds the runner's current public IP to allow_list_ip.
-#       You must also add the Azure-facing egress CIDR (Microsoft Peering) — typically a /24.
 
 
 data "azurerm_resource_group" "kv-rg" {
   name = var.rg_so
 }
 
-# data "azurerm_client_config" "current" {
-#   provider = azurerm.spoke
-# }
 data "azurerm_client_config" "current" {}
 
 
-
-# resource "random_password" "vmpass" {
-#   length      = 20
-#   special     = true
-#   min_lower   = 2
-#   min_upper   = 2
-#   min_numeric = 2
-#   min_special = 2
-# }
-
+resource "random_password" "local" {
+  length           = 24
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
 
 # ── Private DNS Zone for Key Vault (pre-existing in hub) ─────────────────────
 data "azurerm_private_dns_zone" "kv_dns" {
@@ -37,13 +22,11 @@ data "azurerm_private_dns_zone" "kv_dns" {
 }
 
 # ── Key Vault (AVM v0.10.2) ────────────────────────────────────────────────────
-#module "avm_res_keyvault_vault" "keyvault" {
 module "avm_res_keyvault_vault" {
-
   source = "Azure/avm-res-keyvault-vault/azurerm"
   #version   = "0.5.3"
-  version = "0.10.2"
-
+  #version = "0.10.2"
+  #version = "0.11.0"
   providers = { azurerm = azurerm.spoke }
 
   name                          = var.keyvault_name
@@ -109,19 +92,7 @@ module "avm_res_keyvault_vault" {
 }
 
 
-
-resource "random_password" "local" {
-  length           = 24
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
-
-
 # # ── VM Local Admin Password Secret ───────────────────────────────────────────
-# # NOTE: Secret creation requires data-plane access to the Key Vault.
-# # Azure Policy enforces publicNetworkAccess=Disabled. Run from within the
-# # spoke VNet or use: az keyvault secret set (via Portal/Bastion/self-hosted runner)
 # resource "azurerm_key_vault_secret" "localpassword" {
 #   provider     = azurerm.spoke
 #   name         = "avd-local-admin-password"
@@ -131,4 +102,13 @@ resource "random_password" "local" {
 #   #tags         = var.tags
 #   lifecycle { ignore_changes = [tags] }
 #   depends_on = [module.avm_res_keyvault_vault]
+# }
+
+# resource "random_password" "vmpass" {
+#   length      = 20
+#   special     = true
+#   min_lower   = 2
+#   min_upper   = 2
+#   min_numeric = 2
+#   min_special = 2
 # }
