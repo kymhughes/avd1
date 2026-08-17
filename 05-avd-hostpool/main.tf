@@ -79,13 +79,11 @@ module "avm_res_desktopvirtualization_workspace" {
   version = "0.2.2"
 
   virtual_desktop_workspace_name                = var.workspace_name
-  virtual_desktop_workspace_resource_group_name = azurerm_resource_group.service_objects.name
+  virtual_desktop_workspace_resource_group_name = data.azurerm_resource_group.service_objects.name
   virtual_desktop_workspace_location            = var.avdLocation
   virtual_desktop_workspace_tags                = var.tags
   enable_telemetry                              = var.enable_telemetry
   public_network_access_enabled                 = false
-
-
 }
 
 # ── Workspace ↔ Application Group association ─────────────────────────────────
@@ -156,15 +154,13 @@ data "azurerm_private_dns_zone" "avd_feed_dns" {
   resource_group_name = var.hub_dns_zone_rg
 }
 
-
 # ── Workspace Private Endpoint (feed) ───────────────────────────────────
 resource "azurerm_private_endpoint" "workspace_pe" {
   name                = "pe-avd-ws-${var.prefix}"
-  resource_group_name = var.rg_so
+  resource_group_name = data.azurerm_resource_group.service_objects.name
   location            = var.avdLocation
-  #subnet_id           = var.pesubnet_id
-  subnet_id = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_workspace}"
-  tags      = var.tags
+  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_workspace}"
+  tags                = var.tags
 
   private_service_connection {
     name                           = "psc-ws-${var.prefix}"
