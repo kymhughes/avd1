@@ -220,6 +220,32 @@ resource "azurerm_virtual_desktop_host_pool_registration_info" "avd" {
 }
 
 
+locals {
+  key_vault_secrets = merge(
+    {
+      local_password = {
+        name = var.local_password_secret_name
+      }
+    },
+    var.avd_host_pool_id == null ? {} : {
+      avd_registration_token = {
+        name            = var.avd_registration_token_secret_name
+        content_type    = "AVD host pool registration token"
+        expiration_date = time_offset.avd_registration_token_expiry[0].rfc3339
+      }
+    }
+  )
+
+  key_vault_secret_values = merge(
+    {
+      local_password = random_password.local.result
+    },
+    var.avd_host_pool_id == null ? {} : {
+      avd_registration_token = azurerm_virtual_desktop_host_pool_registration_info.avd[0].token
+    }
+  )
+}
+
 
 
 
