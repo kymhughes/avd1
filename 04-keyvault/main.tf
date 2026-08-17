@@ -26,34 +26,46 @@ resource "random_password" "vmpass" {
   min_special = 2
 }
 
+
+# ── Private DNS Zone for Key Vault (pre-existing in hub) ─────────────────────
+data "azurerm_private_dns_zone" "kv_dns" {
+  provider            = azurerm.hub
+  name                = "privatelink.vaultcore.azure.net"
+  resource_group_name = var.hub_dns_zone_rg
+}
+
 # ── Key Vault (AVM v0.10.2) ────────────────────────────────────────────────────
 module "avm_res_keyvault_vault" "this" {
   source = "Azure/avm-res-keyvault-vault/azurerm"
   #version   = "0.5.3"
-  version = "0.10.2"
+  version = "0.11.0"
 
   providers = { azurerm = azurerm.spoke }
 
-  name                = var.keyvault_name
-  resource_group_name = var.rg_so
-  location            = var.avdLocation
-  tenant_id           = var.tenant_id
-  tags                = var.tags
-  enable_telemetry    = var.enable_telemetry
-
-  # Required so IP-based network_acls allow list works alongside the private endpoint.
-  # Without this, Azure disables public access once the PE is attached.
+  name                          = var.keyvault_name
+  resource_group_name           = var.rg_so
+  location                      = var.avdLocation
+  tenant_id                     = var.tenant_id
+  tags                          = var.tags
+  enable_telemetry              = var.enable_telemetry
   public_network_access_enabled = false
   purge_protection_enabled      = false
   #soft_delete_retention_days    = 90
 
-  network_acls = {}
+  network_acls = {
+    bypass         = "None"
+    default_action = "Deny"
+  }
 
   private_endpoints = {
-    pe_kv = {
-      subnet_resource_id            = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_keyvault}"
-      private_dns_zone_resource_ids = [data.azurerm_private_dns_zone.kv_dns.id]
-      tags                          = var.tags
+    vault = {
+      name                            = "${var.key_vault_name}-pe"
+      subnet_resource_id              = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_keyvault}"
+      private_dns_zone_group_name     = "default"
+      private_dns_zone_resource_ids   = [data.azurerm_private_dns_zone.kv_dns.id]
+      private_service_connection_name = "${var.key_vault_name}-psc"
+      location                        = var.avdLocation
+      resource_group_name             = var.rg_so
     }
   }
 
@@ -63,6 +75,14 @@ module "avm_res_keyvault_vault" "this" {
       principal_id               = data.azurerm_client_config.current.object_id
     }
   }
+
+  # private_endpoints = {
+  #   pe_kv = {
+  #     subnet_resource_id            = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_keyvault}"
+  #     private_dns_zone_resource_ids = [data.azurerm_private_dns_zone.kv_dns.id]
+  #     #tags                          = var.tags
+  #   }
+  # }
 
   # NOTE: CMK key creation requires data-plane access to the Key Vault.
   # Azure Policy in this environment enforces publicNetworkAccess=Disabled, so
@@ -82,36 +102,30 @@ module "avm_res_keyvault_vault" "this" {
   # }
 }
 
-# ── Private DNS Zone for Key Vault (pre-existing in hub) ─────────────────────
-data "azurerm_private_dns_zone" "kv_dns" {
-  provider            = azurerm.hub
-  name                = "privatelink.vaultcore.azure.net"
-  resource_group_name = var.hub_dns_zone_rg
-}
 
-# ── KeyVault Private Endpoint (connection) ──────────────────────────────
-resource "azurerm_private_endpoint" "keyvault_pe" {
-  name                = "pe-kv-hp-${var.prefix}"
-  resource_group_name = data.azurerm_resource_group.kv-rg.name
-  location            = var.avdLocation
-  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_hostpool1}"
-  tags                = var.tags
+# # ── KeyVault Private Endpoint (connection) ──────────────────────────────
+# resource "azurerm_private_endpoint" "keyvault_pe" {
+#   name                = "pe-kv-hp-${var.prefix}"
+#   resource_group_name = data.azurerm_resource_group.kv-rg.name
+#   location            = var.avdLocation
+#   subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_hostpool1}"
+#   tags                = var.tags
 
-  private_service_connection {
-    name                           = "pe-hp-${var.prefix}"
-    private_connection_resource_id = module.avm_res_keyvault_vault.this.keyvault_id
-    is_manual_connection           = false
-    subresource_names              = ["connection"]
-  }
+#   private_service_connection {
+#     name                           = "pe-hp-${var.prefix}"
+#     private_connection_resource_id = module.avm_res_keyvault_vault.this.keyvault_id
+#     is_manual_connection           = false
+#     subresource_names              = ["connection"]
+#   }
 
-  private_dns_zone_group {
-    name                 = "dns-kv-${var.prefix}"
-    private_dns_zone_ids = [data.azurerm_private_dns_zone.kv_dns.id]
-  }
+#   private_dns_zone_group {
+#     name                 = "dns-kv-${var.prefix}"
+#     private_dns_zone_ids = [data.azurerm_private_dns_zone.kv_dns.id]
+#   }
 
-  depends_on = [module.avm_res_keyvault_vault.this.keyvault_id]
-  lifecycle { prevent_destroy = false }
-}
+#   depends_on = [module.avm_res_keyvault_vault.this.keyvault_id]
+#   lifecycle { prevent_destroy = false }
+# }
 
 
 # ── VM Local Admin Password Secret ───────────────────────────────────────────
