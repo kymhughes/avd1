@@ -121,11 +121,11 @@ resource "azurerm_private_endpoint" "keyvault_pe" {
   name                = "pe-kv-hp-${var.prefix}"
   resource_group_name = data.azurerm_resource_group.kv-rg.name
   location            = var.avdLocation
-  subnet_id = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_hostpool1}"
-  tags      = var.tags
+  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_hostpool1}"
+  tags                = var.tags
 
   private_service_connection {
-    name = "pe-hp-${var.prefix}"
+    name                           = "pe-hp-${var.prefix}"
     private_connection_resource_id = avm_res_keyvault_vault.keyvault_id
     is_manual_connection           = false
     subresource_names              = ["connection"]
