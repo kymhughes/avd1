@@ -13,6 +13,11 @@
 #   features {}
 # }
 
+provider "azurerm" {
+  subscription_id = var.spoke_subscription_id
+
+  features {}
+}
 
 
 terraform {
