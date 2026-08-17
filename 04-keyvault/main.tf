@@ -109,15 +109,15 @@ data "azurerm_private_dns_zone" "kv_dns" {
   resource_group_name = var.hub_dns_zone_rg
 }
 
-# # VNet link — connects spoke VNet to the hub DNS zone so DNS queries resolve privately.
-# # Created once per spoke VNet; prevent_destroy ensures it is never accidentally removed.
-# resource "azurerm_private_dns_zone_virtual_network_link" "kv_dns_link" {
-#   provider              = azurerm.hub
-#   name                  = "link-kv-${var.prefix}"
-#   resource_group_name   = var.hub_dns_zone_rg
-#   private_dns_zone_name = data.azurerm_private_dns_zone.kv_dns.name
-#   virtual_network_id    = var.spoke_vnet_id
-#   registration_enabled  = false
-#   tags                  = var.tags
-#   lifecycle { prevent_destroy = true }
-# }
+# VNet link — connects spoke VNet to the hub DNS zone so DNS queries resolve privately.
+# Created once per spoke VNet; prevent_destroy ensures it is never accidentally removed.
+resource "azurerm_private_dns_zone_virtual_network_link" "kv_dns_link" {
+  provider              = azurerm.hub
+  name                  = "link-kv-${var.prefix}"
+  resource_group_name   = var.hub_dns_zone_rg
+  private_dns_zone_name = data.azurerm_private_dns_zone.kv_dns.name
+  virtual_network_id    = var.spoke_vnet_id
+  registration_enabled  = false
+  tags                  = var.tags
+  lifecycle { prevent_destroy = false }
+}
