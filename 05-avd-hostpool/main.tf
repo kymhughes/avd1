@@ -261,12 +261,17 @@ locals {
 #   ]
 # }
 
+data "avm_res_keyvault_vault" "key_vault" {
+  name                = var.keyvault_name
+  resource_group_name = azurerm_resource_group.service_objects.name
+}
+
 resource "azurerm_key_vault_secret" "this" {
   for_each = local.key_vault_secrets
 
   name            = each.value.name
   value           = local.key_vault_secret_values[each.key]
-  key_vault_id    = module.key_vault.resource_id
+  key_vault_id    = data.avm_res_keyvault_vault.key_vault.id
   content_type    = try(each.value.content_type, null)
   expiration_date = try(each.value.expiration_date, null)
 
