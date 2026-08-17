@@ -80,6 +80,16 @@ module "avm_res_keyvault_vault" {
     }
   }
 
+  secrets = {
+    local_password = {
+      name = var.local_password_secret_name
+    }
+  }
+
+  secrets_value = {
+    local_password = random_password.local.result
+  }
+
   # NOTE: CMK key creation requires data-plane access to the Key Vault.
   # Azure Policy in this environment enforces publicNetworkAccess=Disabled, so
   # the key must be created from within the spoke VNet (e.g. a self-hosted runner
@@ -100,18 +110,25 @@ module "avm_res_keyvault_vault" {
 
 
 
-# ── VM Local Admin Password Secret ───────────────────────────────────────────
-# NOTE: Secret creation requires data-plane access to the Key Vault.
-# Azure Policy enforces publicNetworkAccess=Disabled. Run from within the
-# spoke VNet or use: az keyvault secret set (via Portal/Bastion/self-hosted runner)
-resource "azurerm_key_vault_secret" "localpassword" {
-  provider     = azurerm.spoke
-  name         = "avd-local-admin-password"
-  value        = random_password.vmpass.result
-  key_vault_id = module.avm_res_keyvault_vault.keyvault_id
-  content_type = "AVD Local Admin Password"
-  #tags         = var.tags
-  lifecycle { ignore_changes = [tags] }
-  depends_on = [module.avm_res_keyvault_vault]
+resource "random_password" "local" {
+  length           = var.local_password_length
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
+
+
+# # ── VM Local Admin Password Secret ───────────────────────────────────────────
+# # NOTE: Secret creation requires data-plane access to the Key Vault.
+# # Azure Policy enforces publicNetworkAccess=Disabled. Run from within the
+# # spoke VNet or use: az keyvault secret set (via Portal/Bastion/self-hosted runner)
+# resource "azurerm_key_vault_secret" "localpassword" {
+#   provider     = azurerm.spoke
+#   name         = "avd-local-admin-password"
+#   value        = random_password.vmpass.result
+#   key_vault_id = module.avm_res_keyvault_vault.keyvault_id
+#   content_type = "AVD Local Admin Password"
+#   #tags         = var.tags
+#   lifecycle { ignore_changes = [tags] }
+#   depends_on = [module.avm_res_keyvault_vault]
+# }
