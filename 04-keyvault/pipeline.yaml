@@ -39,19 +39,18 @@ pool:
 stages:
   - template: ../_common/terraform-plan-apply.yml
     parameters:
-      #environmentName:            '${env}'
-      environmentName:            'npd'
+      environmentName:            '${{variables.env}}'
 
       azureServiceConnection:     'sp-avd-lab'
       deploymentSubscriptionId:   'e4ea360b-bf76-47bc-bb09-81bd23faad9e'
-      backendStateKey:            '${env}-$(tfFolder).tfstate'
+      backendStateKey:            '${{variables.env}}-$(tfFolder).tfstate'
 
-      doPause:                    '${doPause}'
-      doDestroy:                  '${doDestroy}'
-      env:                        '${env}'
+      doPause:                    '${{variables.doPause}}'
+      doDestroy:                  '${{variables.doDestroy}}'
+      env:                        '${{variables.env}}'
 
-      terraformVarFile:           '../${env}.tfvars'
-      tfVariablesFile:            '../variables.tf'    
+      terraformVarFile:           '../${{variables.env}}.tfvars'
+      tfVariablesFile:            '../variables.tf'
       terraformWorkingDirectory:  '$(System.DefaultWorkingDirectory)/$(tfFolder)'
       stateSubscriptionId:        'eb60ae18-0772-4810-8616-c189bb571c25'
       backendResourceGroupName:   'rg-tfstore'
