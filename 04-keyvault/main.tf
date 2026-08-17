@@ -35,7 +35,7 @@ data "azurerm_private_dns_zone" "kv_dns" {
 }
 
 # ── Key Vault (AVM v0.10.2) ────────────────────────────────────────────────────
-module "avm_res_keyvault_vault" "this" {
+module "avm_res_keyvault_vault" "keyvault" {
   source = "Azure/avm-res-keyvault-vault/azurerm"
   #version   = "0.5.3"
   version = "0.11.0"
