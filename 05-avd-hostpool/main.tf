@@ -252,14 +252,14 @@ locals {
   )
 }
 
-resource "time_sleep" "wait_for_private_link" {
-  create_duration = var.private_link_secret_wait_duration
+# resource "time_sleep" "wait_for_private_link" {
+#   create_duration = var.private_link_secret_wait_duration
 
-  depends_on = [
-    module.key_vault,
-    azurerm_private_dns_zone_virtual_network_link.key_vault
-  ]
-}
+#   depends_on = [
+#     module.key_vault,
+#     azurerm_private_dns_zone_virtual_network_link.key_vault
+#   ]
+# }
 
 resource "azurerm_key_vault_secret" "this" {
   for_each = local.key_vault_secrets
@@ -270,7 +270,7 @@ resource "azurerm_key_vault_secret" "this" {
   content_type    = try(each.value.content_type, null)
   expiration_date = try(each.value.expiration_date, null)
 
-  depends_on = [time_sleep.wait_for_private_link]
+  # depends_on = [time_sleep.wait_for_private_link]
 }
 
 
