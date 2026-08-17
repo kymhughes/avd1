@@ -19,14 +19,14 @@ data "azurerm_client_config" "current" {}
 
 
 
-resource "random_password" "vmpass" {
-  length      = 20
-  special     = true
-  min_lower   = 2
-  min_upper   = 2
-  min_numeric = 2
-  min_special = 2
-}
+# resource "random_password" "vmpass" {
+#   length      = 20
+#   special     = true
+#   min_lower   = 2
+#   min_upper   = 2
+#   min_numeric = 2
+#   min_special = 2
+# }
 
 
 # ── Private DNS Zone for Key Vault (pre-existing in hub) ─────────────────────
@@ -82,7 +82,7 @@ module "avm_res_keyvault_vault" {
 
   secrets = {
     local_password = {
-      name = var.local_password_secret_name
+      name = "vm-local-admin-password"
     }
   }
 
@@ -111,7 +111,7 @@ module "avm_res_keyvault_vault" {
 
 
 resource "random_password" "local" {
-  length           = var.local_password_length
+  length           = 24
   special          = true
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
