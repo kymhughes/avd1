@@ -286,3 +286,60 @@ variable "subnets" {
     error_message = "security_rules can only be set when the subnet NSG create option is true."
   }
 }
+
+
+variable "local_password_length" {
+  description = "Length of the generated local password."
+  type        = number
+  default     = 24
+
+  validation {
+    condition     = var.local_password_length >= 12
+    error_message = "The local password length must be at least 12 characters."
+  }
+}
+
+variable "local_password_secret_name" {
+  description = "Name of the Key Vault secret used to store the generated local password."
+  type        = string
+  default     = "local-password"
+
+  validation {
+    condition     = can(regex("^[0-9A-Za-z-]+$", var.local_password_secret_name))
+    error_message = "The local password secret name can contain only letters, numbers, and hyphens."
+  }
+}
+
+variable "avd_host_pool_id" {
+  description = "Resource ID of the AVD host pool to generate a registration token for. Leave null to skip token creation."
+  type        = string
+  default     = null
+}
+
+variable "avd_registration_token_expiry_hours" {
+  description = "Number of hours before the generated AVD host pool registration token expires."
+  type        = number
+  default     = 24
+
+  validation {
+    condition     = var.avd_registration_token_expiry_hours >= 1 && var.avd_registration_token_expiry_hours <= 720
+    error_message = "The AVD registration token expiry must be between 1 and 720 hours."
+  }
+}
+
+variable "avd_registration_token_secret_name" {
+  description = "Name of the Key Vault secret used to store the generated AVD host pool registration token."
+  type        = string
+  default     = "avd-registration-token"
+
+  validation {
+    condition     = can(regex("^[0-9A-Za-z-]+$", var.avd_registration_token_secret_name))
+    error_message = "The AVD registration token secret name can contain only letters, numbers, and hyphens."
+  }
+}
+
+variable "private_link_secret_wait_duration" {
+  description = "Duration to wait after private endpoint and private DNS wiring before writing Key Vault secrets."
+  type        = string
+  default     = "60s"
+}
