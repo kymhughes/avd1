@@ -45,7 +45,7 @@ provider "azurerm" {
   storage_use_azuread             = true
   resource_provider_registrations = "none"
   features {
-    # key_vault {}
+    key_vault {}
   }
 }
 
