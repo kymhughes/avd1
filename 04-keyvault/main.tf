@@ -7,6 +7,12 @@
 #       The http provider auto-adds the runner's current public IP to allow_list_ip.
 #       You must also add the Azure-facing egress CIDR (Microsoft Peering) — typically a /24.
 
+
+data "azurerm_resource_group" "kv-rg" {
+  name = var.rg_keyvault
+}
+
+
 data "azurerm_client_config" "current" {
   provider = azurerm.spoke
 }
@@ -109,15 +115,30 @@ data "azurerm_private_dns_zone" "kv_dns" {
   resource_group_name = var.hub_dns_zone_rg
 }
 
-# VNet link — connects spoke VNet to the hub DNS zone so DNS queries resolve privately.
-# Created once per spoke VNet; prevent_destroy ensures it is never accidentally removed.
-resource "azurerm_private_dns_zone_virtual_network_link" "kv_dns_link" {
-  provider              = azurerm.hub
-  name                  = "link-kv-${var.prefix}"
-  resource_group_name   = var.hub_dns_zone_rg
-  private_dns_zone_name = data.azurerm_private_dns_zone.kv_dns.name
-  virtual_network_id    = var.spoke_vnet_id
-  registration_enabled  = false
-  tags                  = var.tags
+
+# ── KeyVault Private Endpoint (connection) ──────────────────────────────
+resource "azurerm_private_endpoint" "keyvault_pe" {
+  name                = "pe-kv-hp-${var.prefix}"
+  resource_group_name = data.azurerm_resource_group.kv-rg.name
+  location            = var.avdLocation
+  subnet_id = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_hostpool1}"
+  tags      = var.tags
+
+  private_service_connection {
+    name = "pe-hp-${var.prefix}"
+    private_connection_resource_id = avm_res_keyvault_vault.keyvault_id
+    is_manual_connection           = false
+    subresource_names              = ["connection"]
+  }
+
+  private_dns_zone_group {
+    name                 = "dns-kv-${var.prefix}"
+    private_dns_zone_ids = [data.azurerm_private_dns_zone.kv_dns.id]
+  }
+
+  depends_on = [module.avm_res_keyvault_vault]
+  #depends_on = [azurerm_virtual_desktop_host_pool.this]
   lifecycle { prevent_destroy = false }
 }
+
+
