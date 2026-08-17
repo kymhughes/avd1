@@ -42,7 +42,7 @@ module "key_vault" {
   #version   = "0.5.3"
   version = "0.11.0"
 
-  providers = { azurerm = azurerm.spoke }
+  #providers = { azurerm = azurerm.spoke }
 
   name                          = var.keyvault_name
   location                      = var.avdLocation
