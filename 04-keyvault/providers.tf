@@ -9,9 +9,9 @@ terraform {
   }
 }
 
-provider "azurerm" {
-  features {}
-}
+# provider "azurerm" {
+#   features {}
+# }
 
 
 
@@ -39,25 +39,25 @@ provider "azurerm" {
 
 
 
-# provider "azurerm" {
-#   alias                           = "spoke"
-#   subscription_id                 = var.spoke_subscription_id
-#   storage_use_azuread             = true
-#   resource_provider_registrations = "none"
-#   features {
-#     key_vault {}
-#   }
-# }
+provider "azurerm" {
+  alias                           = "spoke"
+  subscription_id                 = var.spoke_subscription_id
+  storage_use_azuread             = true
+  resource_provider_registrations = "none"
+  features {
+    # key_vault {}
+  }
+}
 
-# provider "azurerm" {
-#   alias                           = "hub"
-#   subscription_id                 = var.hub_subscription_id
-#   storage_use_azuread             = true
-#   resource_provider_registrations = "none"
-#   features {}
-# }
+provider "azurerm" {
+  alias                           = "hub"
+  subscription_id                 = var.hub_subscription_id
+  storage_use_azuread             = true
+  resource_provider_registrations = "none"
+  features {}
+}
 
-# provider "azuread" {
-#   tenant_id = var.tenant_id
-#   use_cli   = true
-# }
+provider "azuread" {
+  tenant_id = var.tenant_id
+  use_cli   = true
+}
