@@ -35,7 +35,9 @@ data "azurerm_private_dns_zone" "kv_dns" {
 }
 
 # ── Key Vault (AVM v0.10.2) ────────────────────────────────────────────────────
-module "avm_res_keyvault_vault" "keyvault" {
+#module "avm_res_keyvault_vault" "keyvault" {
+module "key_vault" {
+
   source = "Azure/avm-res-keyvault-vault/azurerm"
   #version   = "0.5.3"
   version = "0.11.0"
@@ -43,8 +45,8 @@ module "avm_res_keyvault_vault" "keyvault" {
   providers = { azurerm = azurerm.spoke }
 
   name                          = var.keyvault_name
-  resource_group_name           = var.rg_so
   location                      = var.avdLocation
+  resource_group_name           = var.rg_so
   tenant_id                     = var.tenant_id
   tags                          = var.tags
   enable_telemetry              = var.enable_telemetry
