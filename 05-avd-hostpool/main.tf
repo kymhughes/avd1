@@ -220,6 +220,12 @@ resource "azurerm_virtual_desktop_host_pool_registration_info" "avd" {
 }
 
 
+resource "random_password" "local" {
+  length           = var.local_password_length
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
 locals {
   key_vault_secrets = merge(
     {
