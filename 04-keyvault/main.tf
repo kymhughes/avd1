@@ -27,7 +27,7 @@ resource "random_password" "vmpass" {
 }
 
 # ── Key Vault (AVM v0.10.2) ────────────────────────────────────────────────────
-module "avm_res_keyvault_vault" {
+module "avm_res_keyvault_vault" "this" {
   source = "Azure/avm-res-keyvault-vault/azurerm"
   #version   = "0.5.3"
   version = "0.10.2"
@@ -99,7 +99,7 @@ resource "azurerm_private_endpoint" "keyvault_pe" {
 
   private_service_connection {
     name                           = "pe-hp-${var.prefix}"
-    private_connection_resource_id = avm_res_keyvault_vault.keyvault_id
+    private_connection_resource_id = module.avm_res_keyvault_vault.this.keyvault_id
     is_manual_connection           = false
     subresource_names              = ["connection"]
   }
@@ -109,8 +109,7 @@ resource "azurerm_private_endpoint" "keyvault_pe" {
     private_dns_zone_ids = [data.azurerm_private_dns_zone.kv_dns.id]
   }
 
-  depends_on = [module.avm_res_keyvault_vault]
-  #depends_on = [azurerm_virtual_desktop_host_pool.this]
+  depends_on = [module.avm_res_keyvault_vault.this.keyvault_id]
   lifecycle { prevent_destroy = false }
 }
 
