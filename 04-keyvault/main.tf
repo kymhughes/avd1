@@ -9,7 +9,7 @@
 
 
 data "azurerm_resource_group" "kv-rg" {
-  name = var.rg_keyvault
+  name = var.rg_so
 }
 
 
