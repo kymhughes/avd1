@@ -80,14 +80,6 @@ module "avm_res_keyvault_vault" {
     }
   }
 
-  # private_endpoints = {
-  #   pe_kv = {
-  #     subnet_resource_id            = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_keyvault}"
-  #     private_dns_zone_resource_ids = [data.azurerm_private_dns_zone.kv_dns.id]
-  #     #tags                          = var.tags
-  #   }
-  # }
-
   # NOTE: CMK key creation requires data-plane access to the Key Vault.
   # Azure Policy in this environment enforces publicNetworkAccess=Disabled, so
   # the key must be created from within the spoke VNet (e.g. a self-hosted runner
@@ -107,42 +99,19 @@ module "avm_res_keyvault_vault" {
 }
 
 
-# # ── KeyVault Private Endpoint (connection) ──────────────────────────────
-# resource "azurerm_private_endpoint" "keyvault_pe" {
-#   name                = "pe-kv-hp-${var.prefix}"
-#   resource_group_name = data.azurerm_resource_group.kv-rg.name
-#   location            = var.avdLocation
-#   subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_hostpool1}"
-#   tags                = var.tags
-
-#   private_service_connection {
-#     name                           = "pe-hp-${var.prefix}"
-#     private_connection_resource_id = module.avm_res_keyvault_vault.this.keyvault_id
-#     is_manual_connection           = false
-#     subresource_names              = ["connection"]
-#   }
-
-#   private_dns_zone_group {
-#     name                 = "dns-kv-${var.prefix}"
-#     private_dns_zone_ids = [data.azurerm_private_dns_zone.kv_dns.id]
-#   }
-
-#   depends_on = [module.avm_res_keyvault_vault.this.keyvault_id]
-#   lifecycle { prevent_destroy = false }
-# }
-
 
 # ── VM Local Admin Password Secret ───────────────────────────────────────────
 # NOTE: Secret creation requires data-plane access to the Key Vault.
 # Azure Policy enforces publicNetworkAccess=Disabled. Run from within the
 # spoke VNet or use: az keyvault secret set (via Portal/Bastion/self-hosted runner)
-# resource "azurerm_key_vault_secret" "localpassword" {
-#   provider     = azurerm.spoke
-#   name         = "avd-local-admin-password"
-#   value        = random_password.vmpass.result
-#   key_vault_id = avm_res_keyvault_vault.keyvault_id
-#   tags         = var.tags
-#   lifecycle { ignore_changes = [tags] }
-#   depends_on = [module.avm_res_keyvault_vault]
-# }
+resource "azurerm_key_vault_secret" "localpassword" {
+  provider     = azurerm.spoke
+  name         = "avd-local-admin-password"
+  value        = random_password.vmpass.result
+  key_vault_id = module.avm_res_keyvault_vault.keyvault_id
+  content_type = "AVD Local Admin Password"
+  #tags         = var.tags
+  lifecycle { ignore_changes = [tags] }
+  depends_on = [module.avm_res_keyvault_vault]
+}
 
