@@ -9,25 +9,28 @@ trigger: none
 
 variables:
   tfFolder: 04-keyvault
-  doPause: '${{ parameters.doPause }}'
-  doDestroy: '${{ parameters.doDestroy }}'
-  env: '${{ parameters.env }}'
+  doPause: false
+  doDestroy: false
+  env: 'npd'
+  # doPause: '${{ parameters.doPause }}'
+  # doDestroy: '${{ parameters.doDestroy }}'
+  # env: '${{ parameters.env }}'
 
-parameters:
-  - name: doPause
-    type: boolean
-    default: false
-  - name: doDestroy
-    type: boolean
-    default: false
-  - name: env
-    displayName: Select environment
-    type: string
-    default: 'npd'
-    values:
-      - npd
-      - tst
-      - prd
+# parameters:
+#   - name: doPause
+#     type: boolean
+#     default: false
+#   - name: doDestroy
+#     type: boolean
+#     default: false
+#   - name: env
+#     displayName: Select environment
+#     type: string
+#     default: 'npd'
+#     values:
+#       - npd
+#       - tst
+#       - prd
 
 pool:
   name: devopspool1
