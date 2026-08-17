@@ -26,7 +26,7 @@ module "avm_res_keyvault_vault" {
   source = "Azure/avm-res-keyvault-vault/azurerm"
   #version   = "0.5.3"
   #version = "0.10.2"
-  version = "0.11.0"
+  version   = "0.11.0"
   providers = { azurerm = azurerm.spoke }
 
   name                          = var.keyvault_name
