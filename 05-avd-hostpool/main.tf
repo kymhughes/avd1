@@ -206,6 +206,28 @@ resource "azurerm_private_endpoint" "hostpool_pe" {
 }
 
 
+resource "time_offset" "avd_registration_token_expiry" {
+  count = var.avd_host_pool_id == null ? 0 : 1
+
+  offset_hours = var.avd_registration_token_expiry_hours
+}
+
+resource "azurerm_virtual_desktop_host_pool_registration_info" "avd" {
+  count = var.avd_host_pool_id == null ? 0 : 1
+
+  hostpool_id     = var.avd_host_pool_id
+  expiration_date = time_offset.avd_registration_token_expiry[0].rfc3339
+}
+
+
+
+
+
+
+
+
+
+
 
 # # ── Private DNS Zone for AVD global feed (pre-existing in hub) ─────────────
 # # Prerequisite: "privatelink-global.wvd.microsoft.com" zone must already exist.
