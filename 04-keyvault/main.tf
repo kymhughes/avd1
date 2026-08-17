@@ -12,16 +12,10 @@ data "azurerm_resource_group" "kv-rg" {
   name = var.rg_so
 }
 
-
 data "azurerm_client_config" "current" {
   provider = azurerm.spoke
 }
 
-# resource "random_string" "suffix" {
-#   length  = 4
-#   special = false
-#   upper   = false
-# }
 
 resource "random_password" "vmpass" {
   length      = 20
@@ -57,7 +51,6 @@ module "avm_res_keyvault_vault" {
 
   private_endpoints = {
     pe_kv = {
-      #subnet_resource_id            = var.pesubnet_id
       subnet_resource_id            = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_keyvault}"
       private_dns_zone_resource_ids = [data.azurerm_private_dns_zone.kv_dns.id]
       tags                          = var.tags
@@ -89,32 +82,12 @@ module "avm_res_keyvault_vault" {
   # }
 }
 
-# ── VM Local Admin Password Secret ───────────────────────────────────────────
-# NOTE: Secret creation requires data-plane access to the Key Vault.
-# Azure Policy enforces publicNetworkAccess=Disabled. Run from within the
-# spoke VNet or use: az keyvault secret set (via Portal/Bastion/self-hosted runner)
-# resource "azurerm_key_vault_secret" "localpassword" {
-#   provider     = azurerm.spoke
-#   name         = "avd-local-admin-password"
-#   value        = random_password.vmpass.result
-#   key_vault_id = avm_res_keyvault_vault.keyvault_id
-#   tags         = var.tags
-#   lifecycle { ignore_changes = [tags] }
-#   depends_on = [module.avm_res_keyvault_vault]
-# }
-
 # ── Private DNS Zone for Key Vault (pre-existing in hub) ─────────────────────
-# DNS zones are managed centrally by the platform/hub team — reference only.
-# Prerequisite: "privatelink.vaultcore.azure.net" zone must already exist in
-# var.hub_dns_zone_rg before running this module.
-# If previously managed by this module, remove from state first:
-#   terraform state rm azurerm_private_dns_zone.kv_dns
 data "azurerm_private_dns_zone" "kv_dns" {
   provider            = azurerm.hub
   name                = "privatelink.vaultcore.azure.net"
   resource_group_name = var.hub_dns_zone_rg
 }
-
 
 # ── KeyVault Private Endpoint (connection) ──────────────────────────────
 resource "azurerm_private_endpoint" "keyvault_pe" {
@@ -141,4 +114,18 @@ resource "azurerm_private_endpoint" "keyvault_pe" {
   lifecycle { prevent_destroy = false }
 }
 
+
+# ── VM Local Admin Password Secret ───────────────────────────────────────────
+# NOTE: Secret creation requires data-plane access to the Key Vault.
+# Azure Policy enforces publicNetworkAccess=Disabled. Run from within the
+# spoke VNet or use: az keyvault secret set (via Portal/Bastion/self-hosted runner)
+# resource "azurerm_key_vault_secret" "localpassword" {
+#   provider     = azurerm.spoke
+#   name         = "avd-local-admin-password"
+#   value        = random_password.vmpass.result
+#   key_vault_id = avm_res_keyvault_vault.keyvault_id
+#   tags         = var.tags
+#   lifecycle { ignore_changes = [tags] }
+#   depends_on = [module.avm_res_keyvault_vault]
+# }
 
