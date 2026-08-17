@@ -50,50 +50,6 @@ resource "azurerm_virtual_desktop_host_pool" "this" {
 }
 
 
-# # ── Host Pool (AVM v0.4.0) ────────────────────────────────────────────────────
-# module "avm_res_desktopvirtualization_hostpool" {
-#   source  = "Azure/avm-res-desktopvirtualization-hostpool/azurerm"
-#   version = "0.4.0"
-
-#   virtual_desktop_host_pool_name                = var.hostpool_name
-#   virtual_desktop_host_pool_resource_group_name = var.rg_pool
-#   resource_group_name                           = var.rg_so
-#   virtual_desktop_host_pool_location            = var.avdLocation
-#   virtual_desktop_host_pool_tags                = var.tags
-#   enable_telemetry                              = var.enable_telemetry
-#   virtual_desktop_host_pool_type                     = "Pooled"
-#   virtual_desktop_host_pool_load_balancer_type       = "BreadthFirst"
-#   virtual_desktop_host_pool_maximum_sessions_allowed = 2
-#   virtual_desktop_host_pool_start_vm_on_connect      = true
-#   virtual_desktop_host_pool_validate_environment     = false
-
-#   # custom_rdp_properties is an object with 11 named fields + custom_properties map.
-#   # Non-standard RDP flags (audiocapturemode, screen mode id, Entra SSO) go in custom_properties.
-#   virtual_desktop_host_pool_custom_rdp_properties = {
-#     audiomode          = 0
-#     redirectclipboard  = 1
-#     redirectcomports   = 0
-#     redirectprinters   = 1
-#     redirectsmartcards = 1
-#     custom_properties = {
-#       "audiocapturemode"  = "i:1"
-#       "screen mode id"    = "i:2"
-#       "enablerdsaadauth"  = "i:1"
-#       "targetisaadjoined" = "i:1"
-#     }
-#   }
-
-# registration_expiration_period accepts a duration string (e.g. "2h", "48h", max "720h"/30d)
-# registration_expiration_period = "720h"
-
-# diagnostic_settings = {
-#   diag = {
-#     workspace_resource_id = var.log_analytics_workspace_id
-#     log_categories        = var.host_pool_log_categories
-#     log_groups            = []
-#   }
-# }
-# }
 
 # ── Application Group (AVM v0.2.1) ────────────────────────────────────────────
 module "avm_res_desktopvirtualization_applicationgroup" {
@@ -115,14 +71,6 @@ module "avm_res_desktopvirtualization_applicationgroup" {
       principal_id               = data.azuread_group.avd_users.object_id
     }
   }
-
-  # diagnostic_settings = {
-  #   diag = {
-  #     workspace_resource_id = var.log_analytics_workspace_id
-  #     log_categories        = var.dag_log_categories
-  #     log_groups            = []
-  #   }
-  # }
 }
 
 # ── Workspace (AVM v0.2.2) ────────────────────────────────────────────────────
@@ -135,17 +83,9 @@ module "avm_res_desktopvirtualization_workspace" {
   virtual_desktop_workspace_location            = var.avdLocation
   virtual_desktop_workspace_tags                = var.tags
   enable_telemetry                              = var.enable_telemetry
+  public_network_access_enabled                 = false
 
-  # Disable public access — clients must use the workspace feed private endpoint.
-  public_network_access_enabled = false
 
-  # diagnostic_settings = {
-  #   diag = {
-  #     workspace_resource_id = var.log_analytics_workspace_id
-  #     log_categories        = var.ws_log_categories
-  #     log_groups            = []
-  #   }
-  # }
 }
 
 # ── Workspace ↔ Application Group association ─────────────────────────────────
@@ -159,12 +99,6 @@ resource "azurerm_role_assignment" "scaling_plan_sp" {
   principal_id                     = var.scaling_plan_sp_id
   skip_service_principal_aad_check = true
 }
-
-# # workspace v0.2.2 has no application_group_ids input; association is a separate resource
-# resource "azurerm_virtual_desktop_workspace_application_group_association" "this" {
-#   workspace_id         = module.avm_res_desktopvirtualization_workspace.resource.id
-#   application_group_id = module.avm_res_desktopvirtualization_applicationgroup.resource_id
-# }
 
 # ── Scaling Plan (AVM v0.2.1) ─────────────────────────────────────────────────
 module "avm_res_desktopvirtualization_scaling_plan" {
@@ -212,65 +146,18 @@ module "avm_res_desktopvirtualization_scaling_plan" {
   ]
 }
 
-# # ── Diagnostic Storage Account (for host pool diagnostics) ───────────────────
-# resource "azurerm_storage_account" "diagnostics" {
-#   name                            = lower(replace("stavddiag${var.prefix}${random_string.suffix.id}", "-", ""))
-#   resource_group_name             = var.rg_so
-#   location                        = var.avdLocation
-#   account_tier                    = "Standard"
-#   account_replication_type        = "LRS"
-#   shared_access_key_enabled       = false
-#   public_network_access_enabled   = false
-#   min_tls_version                 = "TLS1_2"
-#   tags                            = var.tags
-#   lifecycle { prevent_destroy = false }
-# }
+
+
 
 # ── Private DNS Zone for AVD Workspace feed (pre-existing in hub) ────────────
-# Prerequisite: "privatelink.wvd.microsoft.com" zone must already exist in
-# var.hub_dns_zone_rg before running this module.
 data "azurerm_private_dns_zone" "avd_feed_dns" {
   provider            = azurerm.hub
   name                = "privatelink.wvd.microsoft.com"
   resource_group_name = var.hub_dns_zone_rg
 }
 
-# # VNet link — connects spoke VNet to the hub AVD DNS zone so clients
-# # resolve the workspace feed URL over the private network.
-# resource "azurerm_private_dns_zone_virtual_network_link" "avd_feed_dns_link" {
-#   provider              = azurerm.hub
-#   name                  = "link-avd-ws-${var.prefix}-${var.app_name}"
-#   resource_group_name   = var.hub_dns_zone_rg
-#   private_dns_zone_name = data.azurerm_private_dns_zone.avd_feed_dns.name
-#   virtual_network_id    = var.spoke_vnet_id
-#   registration_enabled  = false
-#   tags                  = var.tags
-#   lifecycle { prevent_destroy = false }
-# }
-
-# ── Private DNS Zone for AVD global feed (pre-existing in hub) ─────────────
-# Prerequisite: "privatelink-global.wvd.microsoft.com" zone must already exist.
-# Used by the workspace global private endpoint (initial feed discovery URL).
-data "azurerm_private_dns_zone" "avd_global_dns" {
-  provider            = azurerm.hub
-  name                = "privatelink-global.wvd.microsoft.com"
-  resource_group_name = var.hub_dns_zone_rg
-}
-
-# resource "azurerm_private_dns_zone_virtual_network_link" "avd_global_dns_link" {
-#   provider              = azurerm.hub
-#   name                  = "link-avd-global-${var.prefix}-${var.app_name}"
-#   resource_group_name   = var.hub_dns_zone_rg
-#   private_dns_zone_name = data.azurerm_private_dns_zone.avd_global_dns.name
-#   virtual_network_id    = var.spoke_vnet_id
-#   registration_enabled  = false
-#   tags                  = var.tags
-#   lifecycle { prevent_destroy = false }
-# }
 
 # ── Workspace Private Endpoint (feed) ───────────────────────────────────
-# Enables clients to resolve the AVD workspace feed URL over the private network.
-# One PE per app_name deployment — each host pool / workspace gets its own PE.
 resource "azurerm_private_endpoint" "workspace_pe" {
   name                = "pe-avd-ws-${var.prefix}"
   resource_group_name = var.rg_so
@@ -295,37 +182,9 @@ resource "azurerm_private_endpoint" "workspace_pe" {
   lifecycle { prevent_destroy = false }
 }
 
-# ── Workspace Private Endpoint (global) ────────────────────────────────
-# Required for AVD clients to resolve the initial (global) workspace URL
-# before being redirected to the per-tenant feed endpoint.
-resource "azurerm_private_endpoint" "workspace_global_pe" {
-  name                = "pe-avd-ws-global-${var.prefix}"
-  resource_group_name = var.rg_so
-  location            = var.avdLocation
-  #subnet_id          = var.pesubnet_id
-  subnet_id = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_avdglobal}"
-  tags      = var.tags
 
-  private_service_connection {
-    name                           = "psc-ws-global-${var.prefix}"
-    private_connection_resource_id = module.avm_res_desktopvirtualization_workspace.resource.id
-    is_manual_connection           = false
-    subresource_names              = ["global"]
-  }
-
-  private_dns_zone_group {
-    name                 = "dns-ws-global-${var.prefix}"
-    private_dns_zone_ids = [data.azurerm_private_dns_zone.avd_global_dns.id]
-  }
-
-  depends_on = [module.avm_res_desktopvirtualization_workspace]
-  lifecycle { prevent_destroy = false }
-}
 
 # ── Host Pool Private Endpoint (connection) ──────────────────────────────
-# Enables session hosts to register with the host pool control plane
-# over the private network instead of the public internet.
-# Uses the same privatelink.wvd.microsoft.com zone as the workspace feed PE.
 resource "azurerm_private_endpoint" "hostpool_pe" {
   name                = "pe-avd-hp-${var.prefix}"
   resource_group_name = azurerm_resource_group.compute.name
@@ -346,10 +205,44 @@ resource "azurerm_private_endpoint" "hostpool_pe" {
     name                 = "dns-hp-${var.prefix}"
     private_dns_zone_ids = [data.azurerm_private_dns_zone.avd_feed_dns.id]
   }
-
-  #depends_on = [module.avm_res_desktopvirtualization_hostpool]
   depends_on = [azurerm_virtual_desktop_host_pool.this]
   lifecycle { prevent_destroy = false }
 }
 
 
+
+# # ── Private DNS Zone for AVD global feed (pre-existing in hub) ─────────────
+# # Prerequisite: "privatelink-global.wvd.microsoft.com" zone must already exist.
+# # Used by the workspace global private endpoint (initial feed discovery URL).
+# data "azurerm_private_dns_zone" "avd_global_dns" {
+#   provider            = azurerm.hub
+#   name                = "privatelink-global.wvd.microsoft.com"
+#   resource_group_name = var.hub_dns_zone_rg
+# }
+
+# # ── Workspace Private Endpoint (global) ────────────────────────────────
+# # Required for AVD clients to resolve the initial (global) workspace URL
+# # before being redirected to the per-tenant feed endpoint.
+# resource "azurerm_private_endpoint" "workspace_global_pe" {
+#   name                = "pe-avd-ws-global-${var.prefix}"
+#   resource_group_name = var.rg_so
+#   location            = var.avdLocation
+#   #subnet_id          = var.pesubnet_id
+#   subnet_id = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_avdglobal}"
+#   tags      = var.tags
+
+#   private_service_connection {
+#     name                           = "psc-ws-global-${var.prefix}"
+#     private_connection_resource_id = module.avm_res_desktopvirtualization_workspace.resource.id
+#     is_manual_connection           = false
+#     subresource_names              = ["global"]
+#   }
+
+#   private_dns_zone_group {
+#     name                 = "dns-ws-global-${var.prefix}"
+#     private_dns_zone_ids = [data.azurerm_private_dns_zone.avd_global_dns.id]
+#   }
+
+#   depends_on = [module.avm_res_desktopvirtualization_workspace]
+#   lifecycle { prevent_destroy = false }
+# }
