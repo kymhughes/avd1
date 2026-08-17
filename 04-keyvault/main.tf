@@ -87,15 +87,15 @@ module "avm_res_keyvault_vault" {
 # NOTE: Secret creation requires data-plane access to the Key Vault.
 # Azure Policy enforces publicNetworkAccess=Disabled. Run from within the
 # spoke VNet or use: az keyvault secret set (via Portal/Bastion/self-hosted runner)
-resource "azurerm_key_vault_secret" "localpassword" {
-  provider     = azurerm.spoke
-  name         = "avd-local-admin-password"
-  value        = random_password.vmpass.result
-  key_vault_id = avm_res_keyvault_vault.keyvault_id
-  tags         = var.tags
-  lifecycle { ignore_changes = [tags] }
-  depends_on = [module.avm_res_keyvault_vault]
-}
+# resource "azurerm_key_vault_secret" "localpassword" {
+#   provider     = azurerm.spoke
+#   name         = "avd-local-admin-password"
+#   value        = random_password.vmpass.result
+#   key_vault_id = avm_res_keyvault_vault.keyvault_id
+#   tags         = var.tags
+#   lifecycle { ignore_changes = [tags] }
+#   depends_on = [module.avm_res_keyvault_vault]
+# }
 
 # ── Private DNS Zone for Key Vault (pre-existing in hub) ─────────────────────
 # DNS zones are managed centrally by the platform/hub team — reference only.
