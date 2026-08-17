@@ -9,6 +9,7 @@ trigger: none
 
 variables:
   tfFolder: 04-keyvault
+  doPause: '${{ parameters.doPause }}'
 
 parameters:
   - name: doPause
@@ -34,11 +35,12 @@ stages:
   - template: ../_common/terraform-plan-apply.yml
     parameters:
       environmentName:            '${{ parameters.env }}'
+
       azureServiceConnection:     'sp-avd-lab'
       deploymentSubscriptionId:   'e4ea360b-bf76-47bc-bb09-81bd23faad9e'
       backendStateKey:            '${{ parameters.env }}-$(tfFolder).tfstate'
 
-      doPause:                    '${{ parameters.doPause }}'
+      doPause:                    '${doPause}'
       doDestroy:                  '${{ parameters.doDestroy }}'
       env:                        '${{ parameters.env }}'
 
