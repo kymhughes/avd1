@@ -12,9 +12,11 @@ data "azurerm_resource_group" "kv-rg" {
   name = var.rg_so
 }
 
-data "azurerm_client_config" "current" {
-  provider = azurerm.spoke
-}
+# data "azurerm_client_config" "current" {
+#   provider = azurerm.spoke
+# }
+data "azurerm_client_config" "current" {}
+
 
 
 resource "random_password" "vmpass" {
@@ -29,7 +31,7 @@ resource "random_password" "vmpass" {
 
 # ── Private DNS Zone for Key Vault (pre-existing in hub) ─────────────────────
 data "azurerm_private_dns_zone" "kv_dns" {
-  provider            = azurerm.hub
+  #provider            = azurerm.hub
   name                = "privatelink.vaultcore.azure.net"
   resource_group_name = var.hub_dns_zone_rg
 }
@@ -42,7 +44,7 @@ module "key_vault" {
   #version   = "0.5.3"
   version = "0.10.2"
 
-  providers = { azurerm = azurerm.spoke }
+  #providers = { azurerm = azurerm.spoke }
 
   name                          = var.keyvault_name
   location                      = var.avdLocation
