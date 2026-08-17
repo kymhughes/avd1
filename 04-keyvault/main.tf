@@ -69,11 +69,11 @@ module "avm_res_keyvault_vault" {
     }
   }
 
-  # secrets = {
-  #   local_password = {
-  #     name = "vm-local-admin-password"
-  #   }
-  # }
+  secrets = {
+    local_password = {
+      name = "vm-local-admin-password"
+    }
+  }
 
   secrets_value = {
     local_password = random_password.local.result
