@@ -40,7 +40,7 @@ module "key_vault" {
 
   source = "Azure/avm-res-keyvault-vault/azurerm"
   #version   = "0.5.3"
-  version = "0.11.0"
+  version = "0.10.2"
 
   #providers = { azurerm = azurerm.spoke }
 
@@ -59,17 +59,17 @@ module "key_vault" {
     default_action = "Deny"
   }
 
-  private_endpoints = {
-    vault = {
-      name                            = "${var.key_vault_name}-pe"
-      subnet_resource_id              = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_keyvault}"
-      private_dns_zone_group_name     = "default"
-      private_dns_zone_resource_ids   = [data.azurerm_private_dns_zone.kv_dns.id]
-      private_service_connection_name = "${var.key_vault_name}-psc"
-      location                        = var.avdLocation
-      resource_group_name             = var.rg_so
-    }
-  }
+  # private_endpoints = {
+  #   vault = {
+  #     name                            = "${var.key_vault_name}-pe"
+  #     subnet_resource_id              = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_keyvault}"
+  #     private_dns_zone_group_name     = "default"
+  #     private_dns_zone_resource_ids   = [data.azurerm_private_dns_zone.kv_dns.id]
+  #     private_service_connection_name = "${var.key_vault_name}-psc"
+  #     location                        = var.avdLocation
+  #     resource_group_name             = var.rg_so
+  #   }
+  # }
 
   role_assignments = {
     kv_admin = {
