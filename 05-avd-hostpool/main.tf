@@ -7,11 +7,8 @@
 #           custom_properties{} map — NOT in custom_rdp_properties typed object.
 #           The AVM typed object only supports 11 named fields and silently drops anything else.
 
-resource "azurerm_resource_group" "service_objects" {
-  location = var.avdLocation
-  name     = var.rg_so
-  tags     = var.tags
-  lifecycle { prevent_destroy = false }
+data "azurerm_resource_group" "service_objects" {
+  name = var.rg_so
 }
 
 resource "azurerm_resource_group" "compute" {
@@ -50,8 +47,6 @@ resource "azurerm_virtual_desktop_host_pool" "this" {
   validate_environment     = var.hostpool_validate_environment
   custom_rdp_properties    = var.hostpool_custom_rdp_properties
   tags                     = var.tags
-
-  # depends_on = [azurerm_resource_group.]
 }
 
 
@@ -105,13 +100,12 @@ module "avm_res_desktopvirtualization_applicationgroup" {
   source  = "Azure/avm-res-desktopvirtualization-applicationgroup/azurerm"
   version = "0.2.1"
 
-  virtual_desktop_application_group_name                = var.app_group_name
-  virtual_desktop_application_group_resource_group_name = var.rg_so
-  virtual_desktop_application_group_location            = var.avdLocation
-  virtual_desktop_application_group_tags                = var.tags
-  enable_telemetry                                      = var.enable_telemetry
-  virtual_desktop_application_group_type                = var.app_group_type
-  #virtual_desktop_application_group_host_pool_id                 = module.avm_res_desktopvirtualization_hostpool.resource_id 
+  virtual_desktop_application_group_name                         = var.app_group_name
+  virtual_desktop_application_group_resource_group_name          = azurerm_resource_group.compute.name
+  virtual_desktop_application_group_location                     = var.avdLocation
+  virtual_desktop_application_group_tags                         = var.tags
+  enable_telemetry                                               = var.enable_telemetry
+  virtual_desktop_application_group_type                         = var.app_group_type
   virtual_desktop_application_group_host_pool_id                 = azurerm_virtual_desktop_host_pool.this.id
   virtual_desktop_application_group_default_desktop_display_name = var.app_group_default_desktop_display_name
 
@@ -180,7 +174,7 @@ module "avm_res_desktopvirtualization_scaling_plan" {
   depends_on = [azurerm_role_assignment.scaling_plan_sp]
 
   virtual_desktop_scaling_plan_name                = var.scplan_name
-  virtual_desktop_scaling_plan_resource_group_name = var.rg_so
+  virtual_desktop_scaling_plan_resource_group_name = var.rg_pool
   virtual_desktop_scaling_plan_location            = var.avdLocation
   virtual_desktop_scaling_plan_tags                = var.tags
   enable_telemetry                                 = var.enable_telemetry
@@ -334,7 +328,7 @@ resource "azurerm_private_endpoint" "workspace_global_pe" {
 # Uses the same privatelink.wvd.microsoft.com zone as the workspace feed PE.
 resource "azurerm_private_endpoint" "hostpool_pe" {
   name                = "pe-avd-hp-${var.prefix}"
-  resource_group_name = azurerm_resource_group.service_objects.name
+  resource_group_name = azurerm_resource_group.compute.name
   location            = var.avdLocation
   #subnet_id          = var.pesubnet_id
   subnet_id = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_hostpool1}"
