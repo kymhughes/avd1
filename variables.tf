@@ -343,3 +343,49 @@ variable "private_link_secret_wait_duration" {
   type        = string
   default     = "60s"
 }
+
+variable "scaling_plan_schedules" {
+  description = "Autoscale schedules for the AVD scaling plan."
+  type = list(object({
+    name                                 = string
+    days_of_week                         = list(string)
+    ramp_up_start_time                   = string
+    ramp_up_load_balancing_algorithm     = optional(string, "BreadthFirst")
+    ramp_up_minimum_hosts_percent        = optional(number, 20)
+    ramp_up_capacity_threshold_percent   = optional(number, 60)
+    peak_start_time                      = string
+    peak_load_balancing_algorithm        = optional(string, "BreadthFirst")
+    ramp_down_start_time                 = string
+    ramp_down_load_balancing_algorithm   = optional(string, "DepthFirst")
+    ramp_down_minimum_hosts_percent      = optional(number, 10)
+    ramp_down_force_logoff_users         = optional(bool, false)
+    ramp_down_wait_time_minutes          = optional(number, 45)
+    ramp_down_notification_message       = optional(string, "Please save your work and sign out. This session host is scheduled for shutdown.")
+    ramp_down_capacity_threshold_percent = optional(number, 20)
+    ramp_down_stop_hosts_when            = optional(string, "ZeroSessions")
+    off_peak_start_time                  = string
+    off_peak_load_balancing_algorithm    = optional(string, "DepthFirst")
+  }))
+  default = [
+    {
+      name                                 = "weekdays"
+      days_of_week                         = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+      ramp_up_start_time                   = "07:00"
+      ramp_up_load_balancing_algorithm     = "BreadthFirst"
+      ramp_up_minimum_hosts_percent        = 20
+      ramp_up_capacity_threshold_percent   = 60
+      peak_start_time                      = "09:00"
+      peak_load_balancing_algorithm        = "BreadthFirst"
+      ramp_down_start_time                 = "18:00"
+      ramp_down_load_balancing_algorithm   = "DepthFirst"
+      ramp_down_minimum_hosts_percent      = 10
+      ramp_down_force_logoff_users         = false
+      ramp_down_wait_time_minutes          = 45
+      ramp_down_notification_message       = "Please save your work and sign out. This session host is scheduled for shutdown."
+      ramp_down_capacity_threshold_percent = 20
+      ramp_down_stop_hosts_when            = "ZeroSessions"
+      off_peak_start_time                  = "22:00"
+      off_peak_load_balancing_algorithm    = "DepthFirst"
+    }
+  ]
+}
