@@ -1,0 +1,58 @@
+trigger: none
+# trigger:
+#  branches:
+#    include:
+#      - main
+#  paths:
+#    include:
+#      - 03-service-objects/*
+
+variables:
+  tfFolder: 03-service-objects
+  doPause: false
+  doDestroy: false
+  env: 'npd'
+  # doPause: '${{ parameters.doPause }}'
+  # doDestroy: '${{ parameters.doDestroy }}'
+  # env: '${{ parameters.env }}'
+
+# parameters:
+#   - name: doPause
+#     type: boolean
+#     default: false
+#   - name: doDestroy
+#     type: boolean
+#     default: false
+#   - name: env
+#     displayName: Select environment
+#     type: string
+#     default: 'npd'
+#     values:
+#       - npd
+#       - tst
+#       - prd
+
+pool:
+  name: devopspool1
+  #name: Azure Pipelines
+
+stages:
+  - template: ../_common/terraform-plan-apply.yml
+    parameters:
+      environmentName:            '${{variables.env}}'
+
+      azureServiceConnection:     'sp-avd-lab'
+      deploymentSubscriptionId:   'e4ea360b-bf76-47bc-bb09-81bd23faad9e'
+      backendStateKey:            '${{variables.env}}-$(tfFolder).tfstate'
+
+      doPause:                    '${{variables.doPause}}'
+      doDestroy:                  '${{variables.doDestroy}}'
+      env:                        '${{variables.env}}'
+
+      terraformVarFile:           '../${{variables.env}}.tfvars'
+      tfVariablesFile:            '../variables.tf'
+      terraformWorkingDirectory:  '$(System.DefaultWorkingDirectory)/$(tfFolder)'
+      stateSubscriptionId:        'eb60ae18-0772-4810-8616-c189bb571c25'
+      backendResourceGroupName:   'rg-tfstore'
+      backendStorageAccountName:  'tfstore101'
+      
