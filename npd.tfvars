@@ -74,7 +74,8 @@ subnets = {
           priority                   = 110
           direction                  = "Outbound"
           access                     = "Allow"
-          protocol                   = "*"
+          protocol                   = "*
+          "
           source_address_prefix      = "VirtualNetwork"
           destination_address_prefix = "*"
           destination_port_range     = "*"
