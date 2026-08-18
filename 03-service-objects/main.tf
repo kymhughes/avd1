@@ -26,7 +26,7 @@ module "avm_res_desktopvirtualization_workspace" {
   version = "0.2.2"
 
   virtual_desktop_workspace_name                = var.workspace_name
-  virtual_desktop_workspace_resource_group_name = data.azurerm_resource_group.service_objects.name
+  virtual_desktop_workspace_resource_group_name = azurerm_resource_group.service_objects.name
   virtual_desktop_workspace_location            = var.avdLocation
   virtual_desktop_workspace_tags                = var.tags
   enable_telemetry                              = var.enable_telemetry
