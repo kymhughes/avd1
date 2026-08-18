@@ -15,7 +15,7 @@ hub_vnet                               = "vnet-auea-hub1"
 vnet_name                              = "vnet-itm-vnet-npd"
 vnet_range                             = ["172.17.100.0/23"]
 dns_servers                            = ["172.17.10.4"]
-keyvault_name                          = "kv-avd-it02-npd"
+keyvault_name                          = "kv-avd-it01-npd"
 user_group_name                        = "avd_users_cloud"
 hostpool_name                          = "pool-itm001"
 workspace_name                         = "workspace-itm"
@@ -69,6 +69,15 @@ subnets = {
           source_address_prefix      = "VirtualNetwork"
           destination_address_prefix = "*"
           destination_port_range     = "443"
+        }
+        "Allow-any-Outbound" = {
+          priority                   = 110
+          direction                  = "Outbound"
+          access                     = "Allow"
+          protocol                   = "all"
+          source_address_prefix      = "VirtualNetwork"
+          destination_address_prefix = "*"
+          destination_port_range     = "*"
         }
       }
     }
