@@ -344,6 +344,30 @@ variable "private_link_secret_wait_duration" {
   default     = "60s"
 }
 
+variable "scheduled_agent_updates" {
+  description = "Optional scheduled AVD agent update configuration."
+  type = object({
+    enabled                   = optional(bool, true)
+    timezone                  = optional(string, "AUS Eastern Standard Time")
+    use_session_host_timezone = optional(bool, false)
+    schedules = list(object({
+      day_of_week = string
+      hour_of_day = number
+    }))
+  })
+  default = {
+    enabled                   = true
+    timezone                  = "AUS Eastern Standard Time"
+    use_session_host_timezone = false
+    schedules = [
+      {
+        day_of_week = "Saturday"
+        hour_of_day = 2
+      }
+    ]
+  }
+}
+
 variable "scaling_plan_schedules" {
   description = "Autoscale schedules for the AVD scaling plan."
   type = list(object({
