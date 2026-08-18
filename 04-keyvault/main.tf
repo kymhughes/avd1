@@ -1,17 +1,16 @@
 # ── Key Vault — CMK Key, VM Password Secret, Private Endpoint ─────────────────
-resource "azurerm_resource_group" "service_objects" {
-  location = var.avdLocation
-  name     = var.rg_so
-  tags     = var.tags
-  lifecycle { prevent_destroy = false }
-}
-
-# data "azurerm_resource_group" "kv-rg" {
-#   name = var.rg_so
+# resource "azurerm_resource_group" "service_objects" {
+#   location = var.avdLocation
+#   name     = var.rg_so
+#   tags     = var.tags
+#   lifecycle { prevent_destroy = false }
 # }
 
-data "azurerm_client_config" "current" {}
+data "azurerm_resource_group" "service_objects" {
+  name = var.rg_so
+}
 
+data "azurerm_client_config" "current" {}
 
 resource "random_password" "local" {
   length           = 24
@@ -37,7 +36,7 @@ module "avm_res_keyvault_vault" {
 
   name                          = var.keyvault_name
   location                      = var.avdLocation
-  resource_group_name           = azurerm_resource_group.service_objects.name
+  resource_group_name           = data.azurerm_resource_group.service_objects.name
   tenant_id                     = var.tenant_id
   tags                          = var.tags
   enable_telemetry              = var.enable_telemetry
@@ -58,7 +57,7 @@ module "avm_res_keyvault_vault" {
       private_dns_zone_resource_ids   = [data.azurerm_private_dns_zone.kv_dns.id]
       private_service_connection_name = "${var.keyvault_name}-psc"
       location                        = var.avdLocation
-      resource_group_name             = azurerm_resource_group.service_objects.name
+      resource_group_name             = data.azurerm_resource_group.service_objects.name
     }
   }
 
