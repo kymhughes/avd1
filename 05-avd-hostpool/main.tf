@@ -180,30 +180,30 @@ resource "azurerm_role_assignment" "scaling_plan_sp" {
 
 
 
-# ── Host Pool Private Endpoint (connection) ──────────────────────────────
-resource "azurerm_private_endpoint" "hostpool_pe" {
-  name                = "pe-avd-hp-${var.prefix}"
-  resource_group_name = azurerm_resource_group.compute.name
-  location            = var.avdLocation
-  #subnet_id          = var.pesubnet_id
-  subnet_id = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_hostpool1}"
-  tags      = var.tags
+# # ── Host Pool Private Endpoint (connection) ──────────────────────────────
+# resource "azurerm_private_endpoint" "hostpool_pe" {
+#   name                = "pe-avd-hp-${var.prefix}"
+#   resource_group_name = azurerm_resource_group.compute.name
+#   location            = var.avdLocation
+#   #subnet_id          = var.pesubnet_id
+#   subnet_id = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_hostpool1}"
+#   tags      = var.tags
 
-  private_service_connection {
-    name = "psc-hp-${var.prefix}"
-    #private_connection_resource_id = module.avm_res_desktopvirtualization_hostpool.resource_id
-    private_connection_resource_id = azurerm_virtual_desktop_host_pool.this.id
-    is_manual_connection           = false
-    subresource_names              = ["connection"]
-  }
+#   private_service_connection {
+#     name = "psc-hp-${var.prefix}"
+#     #private_connection_resource_id = module.avm_res_desktopvirtualization_hostpool.resource_id
+#     private_connection_resource_id = azurerm_virtual_desktop_host_pool.this.id
+#     is_manual_connection           = false
+#     subresource_names              = ["connection"]
+#   }
 
-  private_dns_zone_group {
-    name                 = "dns-hp-${var.prefix}"
-    private_dns_zone_ids = [data.azurerm_private_dns_zone.avd_feed_dns.id]
-  }
-  depends_on = [azurerm_virtual_desktop_host_pool.this]
-  lifecycle { prevent_destroy = false }
-}
+#   private_dns_zone_group {
+#     name                 = "dns-hp-${var.prefix}"
+#     private_dns_zone_ids = [data.azurerm_private_dns_zone.avd_feed_dns.id]
+#   }
+#   depends_on = [azurerm_virtual_desktop_host_pool.this]
+#   lifecycle { prevent_destroy = false }
+# }
 
 
 # resource "time_offset" "avd_registration_token_expiry" {
