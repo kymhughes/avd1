@@ -141,3 +141,5 @@ subnets = {
     }
   }
 }
+
+scaling_plan_name = "sp-avd-aue-001"
