@@ -32,8 +32,6 @@ resource "random_string" "suffix" {
 }
 
 # # ── Host Pool (AzureRM) ───────────────
-# AVD current version (v0.4.0 ) does not support disabling public access as part of deployment, so 
-# reverting to Azurerm in the short term.  once AVM (likely v0.5.0+) supports this feature, then this code sholud be reverted to AVM code below
 resource "azurerm_virtual_desktop_host_pool" "this" {
   name                = var.hostpool_name
   location            = var.avdLocation
@@ -73,17 +71,10 @@ module "avm_res_desktopvirtualization_applicationgroup" {
   }
 }
 
-# # ── Workspace (AVM v0.2.2) ────────────────────────────────────────────────────
-# module "avm_res_desktopvirtualization_workspace" {
-#   source  = "Azure/avm-res-desktopvirtualization-workspace/azurerm"
-#   version = "0.2.2"
 
-#   virtual_desktop_workspace_name                = var.workspace_name
-#   virtual_desktop_workspace_resource_group_name = data.azurerm_resource_group.service_objects.name
-#   virtual_desktop_workspace_location            = var.avdLocation
-#   virtual_desktop_workspace_tags                = var.tags
-#   enable_telemetry                              = var.enable_telemetry
-#   public_network_access_enabled                 = false
+# data "azurerm_virtual_desktop_workspace" "existing" {
+#   name                = "avd-workspace-prod"
+#   resource_group_name = "rg-avd-service-objects"
 # }
 
 # ── Workspace ↔ Application Group association ─────────────────────────────────
@@ -91,7 +82,6 @@ module "avm_res_desktopvirtualization_applicationgroup" {
 # before a scaling plan can be attached. The role_assignments variable in hostpool AVM v0.4.0 is
 # declared but unimplemented, so we use a standalone resource with explicit ordering.
 resource "azurerm_role_assignment" "scaling_plan_sp" {
-  #scope                            = module.avm_res_desktopvirtualization_hostpool.resource_id
   scope                            = azurerm_virtual_desktop_host_pool.this.id
   role_definition_name             = "Desktop Virtualization Power On Off Contributor"
   principal_id                     = var.scaling_plan_sp_id
