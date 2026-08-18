@@ -75,7 +75,6 @@ subnets = {
           direction                  = "Outbound"
           access                     = "Allow"
           protocol                   = "*
-          "
           source_address_prefix      = "VirtualNetwork"
           destination_address_prefix = "*"
           destination_port_range     = "*"
