@@ -413,3 +413,61 @@ variable "scaling_plan_schedules" {
     }
   ]
 }
+variable "registration_token_ttl" {
+  description = "TTL for the generated registration token. Example: 24h, 168h, 720h."
+  type        = string
+  default     = "24h"
+}
+
+variable "create_registration_token" {
+  description = "Create a host pool registration token for session host deployment."
+  type        = bool
+  default     = true
+}
+
+variable "scaling_plan_name" {
+  description = "Name of the AVD scaling plan."
+  type        = string
+}
+
+variable "scaling_plan_friendly_name" {
+  description = "Friendly name for the AVD scaling plan."
+  type        = string
+  default     = null
+}
+
+variable "scaling_plan_description" {
+  description = "Description for the AVD scaling plan."
+  type        = string
+  default     = "Dynamic autoscale plan for the AVD host pool."
+}
+
+variable "scaling_plan_time_zone" {
+  description = "Windows time zone used by the scaling plan."
+  type        = string
+  default     = "AUS Eastern Standard Time"
+}
+
+variable "scaling_plan_exclusion_tag" {
+  description = "Optional VM tag name used to exclude session hosts from autoscale."
+  type        = string
+  default     = "excludeFromAvdAutoscale"
+}
+
+variable "create_scaling_plan_rbac" {
+  description = "Create the custom RBAC role and assignment required by AVD Autoscale."
+  type        = bool
+  default     = true
+}
+
+variable "scaling_plan_rbac_scope" {
+  description = "Scope for AVD Autoscale RBAC. Leave null to use resource_group_name. Set to the session host VM resource group scope if VMs are in a different resource group."
+  type        = string
+  default     = null
+}
+
+variable "scaling_plan_role_definition_name" {
+  description = "Name of the custom role definition used by AVD Autoscale."
+  type        = string
+  default     = "AVD Autoscale Power Management"
+}

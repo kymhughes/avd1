@@ -66,6 +66,16 @@ resource "azurerm_virtual_desktop_host_pool" "this" {
   }
 }
 
+resource "azurerm_virtual_desktop_host_pool_registration_info" "this" {
+  count = var.create_registration_token ? 1 : 0
+
+  hostpool_id     = azurerm_virtual_desktop_host_pool.this.id
+  expiration_date = timeadd(timestamp(), var.registration_token_ttl)
+
+  lifecycle {
+    ignore_changes = [expiration_date]
+  }
+}
 
 
 # ── Application Group (AVM v0.2.1) ────────────────────────────────────────────
