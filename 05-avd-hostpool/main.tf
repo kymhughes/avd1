@@ -73,18 +73,18 @@ module "avm_res_desktopvirtualization_applicationgroup" {
   }
 }
 
-# ── Workspace (AVM v0.2.2) ────────────────────────────────────────────────────
-module "avm_res_desktopvirtualization_workspace" {
-  source  = "Azure/avm-res-desktopvirtualization-workspace/azurerm"
-  version = "0.2.2"
+# # ── Workspace (AVM v0.2.2) ────────────────────────────────────────────────────
+# module "avm_res_desktopvirtualization_workspace" {
+#   source  = "Azure/avm-res-desktopvirtualization-workspace/azurerm"
+#   version = "0.2.2"
 
-  virtual_desktop_workspace_name                = var.workspace_name
-  virtual_desktop_workspace_resource_group_name = data.azurerm_resource_group.service_objects.name
-  virtual_desktop_workspace_location            = var.avdLocation
-  virtual_desktop_workspace_tags                = var.tags
-  enable_telemetry                              = var.enable_telemetry
-  public_network_access_enabled                 = false
-}
+#   virtual_desktop_workspace_name                = var.workspace_name
+#   virtual_desktop_workspace_resource_group_name = data.azurerm_resource_group.service_objects.name
+#   virtual_desktop_workspace_location            = var.avdLocation
+#   virtual_desktop_workspace_tags                = var.tags
+#   enable_telemetry                              = var.enable_telemetry
+#   public_network_access_enabled                 = false
+# }
 
 # ── Workspace ↔ Application Group association ─────────────────────────────────
 # The AVD service principal needs 'Desktop Virtualization Power On Off Contributor' on the host pool
@@ -98,85 +98,85 @@ resource "azurerm_role_assignment" "scaling_plan_sp" {
   skip_service_principal_aad_check = true
 }
 
-# ── Scaling Plan (AVM v0.2.1) ─────────────────────────────────────────────────
-module "avm_res_desktopvirtualization_scaling_plan" {
-  source  = "Azure/avm-res-desktopvirtualization-scalingplan/azurerm"
-  version = "0.2.1"
+# # ── Scaling Plan (AVM v0.2.1) ─────────────────────────────────────────────────
+# module "avm_res_desktopvirtualization_scaling_plan" {
+#   source  = "Azure/avm-res-desktopvirtualization-scalingplan/azurerm"
+#   version = "0.2.1"
 
-  depends_on = [azurerm_role_assignment.scaling_plan_sp]
+#   depends_on = [azurerm_role_assignment.scaling_plan_sp]
 
-  virtual_desktop_scaling_plan_name                = var.scplan_name
-  virtual_desktop_scaling_plan_resource_group_name = var.rg_pool
-  virtual_desktop_scaling_plan_location            = var.avdLocation
-  virtual_desktop_scaling_plan_tags                = var.tags
-  enable_telemetry                                 = var.enable_telemetry
+#   virtual_desktop_scaling_plan_name                = var.scplan_name
+#   virtual_desktop_scaling_plan_resource_group_name = var.rg_pool
+#   virtual_desktop_scaling_plan_location            = var.avdLocation
+#   virtual_desktop_scaling_plan_tags                = var.tags
+#   enable_telemetry                                 = var.enable_telemetry
 
-  virtual_desktop_scaling_plan_time_zone = "AUS Eastern Standard Time"
-  virtual_desktop_scaling_plan_host_pool = [
-    {
-      #hostpool_id          = module.avm_res_desktopvirtualization_hostpool.resource_id
-      hostpool_id          = azurerm_virtual_desktop_host_pool.this.id
-      scaling_plan_enabled = true
-    }
-  ]
+#   virtual_desktop_scaling_plan_time_zone = "AUS Eastern Standard Time"
+#   virtual_desktop_scaling_plan_host_pool = [
+#     {
+#       #hostpool_id          = module.avm_res_desktopvirtualization_hostpool.resource_id
+#       hostpool_id          = azurerm_virtual_desktop_host_pool.this.id
+#       scaling_plan_enabled = true
+#     }
+#   ]
 
-  virtual_desktop_scaling_plan_schedule = [
-    {
-      name                                 = "Weekdays"
-      days_of_week                         = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-      off_peak_start_time                  = "19:00"
-      off_peak_load_balancing_algorithm    = "DepthFirst"
-      ramp_down_start_time                 = "18:00"
-      ramp_down_load_balancing_algorithm   = "DepthFirst"
-      ramp_down_minimum_hosts_percent      = 10
-      ramp_down_force_logoff_users         = false
-      ramp_down_wait_time_minutes          = 45
-      ramp_down_notification_message       = "Please save your work. Session will be disconnected in 15 minutes."
-      ramp_down_capacity_threshold_percent = 90
-      ramp_down_stop_hosts_when            = "ZeroActiveSessions"
-      ramp_up_load_balancing_algorithm     = "BreadthFirst"
-      ramp_up_start_time                   = "07:00"
-      ramp_up_capacity_threshold_percent   = 60
-      ramp_up_minimum_hosts_percent        = 20
-      peak_load_balancing_algorithm        = "BreadthFirst"
-      peak_start_time                      = "09:00"
-    }
-  ]
-}
-
-
+#   virtual_desktop_scaling_plan_schedule = [
+#     {
+#       name                                 = "Weekdays"
+#       days_of_week                         = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+#       off_peak_start_time                  = "19:00"
+#       off_peak_load_balancing_algorithm    = "DepthFirst"
+#       ramp_down_start_time                 = "18:00"
+#       ramp_down_load_balancing_algorithm   = "DepthFirst"
+#       ramp_down_minimum_hosts_percent      = 10
+#       ramp_down_force_logoff_users         = false
+#       ramp_down_wait_time_minutes          = 45
+#       ramp_down_notification_message       = "Please save your work. Session will be disconnected in 15 minutes."
+#       ramp_down_capacity_threshold_percent = 90
+#       ramp_down_stop_hosts_when            = "ZeroActiveSessions"
+#       ramp_up_load_balancing_algorithm     = "BreadthFirst"
+#       ramp_up_start_time                   = "07:00"
+#       ramp_up_capacity_threshold_percent   = 60
+#       ramp_up_minimum_hosts_percent        = 20
+#       peak_load_balancing_algorithm        = "BreadthFirst"
+#       peak_start_time                      = "09:00"
+#     }
+#   ]
+# }
 
 
-# ── Private DNS Zone for AVD Workspace feed (pre-existing in hub) ────────────
-data "azurerm_private_dns_zone" "avd_feed_dns" {
-  provider            = azurerm.hub
-  name                = "privatelink.wvd.microsoft.com"
-  resource_group_name = var.hub_dns_zone_rg
-}
 
-# ── Workspace Private Endpoint (feed) ───────────────────────────────────
-resource "azurerm_private_endpoint" "workspace_pe" {
-  name                = "pe-avd-ws-${var.prefix}"
-  resource_group_name = data.azurerm_resource_group.service_objects.name
-  location            = var.avdLocation
-  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_workspace}"
-  tags                = var.tags
 
-  private_service_connection {
-    name                           = "psc-ws-${var.prefix}"
-    private_connection_resource_id = module.avm_res_desktopvirtualization_workspace.resource.id
-    is_manual_connection           = false
-    subresource_names              = ["feed"]
-  }
+# # ── Private DNS Zone for AVD Workspace feed (pre-existing in hub) ────────────
+# data "azurerm_private_dns_zone" "avd_feed_dns" {
+#   provider            = azurerm.hub
+#   name                = "privatelink.wvd.microsoft.com"
+#   resource_group_name = var.hub_dns_zone_rg
+# }
 
-  private_dns_zone_group {
-    name                 = "dns-ws-${var.prefix}"
-    private_dns_zone_ids = [data.azurerm_private_dns_zone.avd_feed_dns.id]
-  }
+# # ── Workspace Private Endpoint (feed) ───────────────────────────────────
+# resource "azurerm_private_endpoint" "workspace_pe" {
+#   name                = "pe-avd-ws-${var.prefix}"
+#   resource_group_name = data.azurerm_resource_group.service_objects.name
+#   location            = var.avdLocation
+#   subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_workspace}"
+#   tags                = var.tags
 
-  depends_on = [module.avm_res_desktopvirtualization_workspace]
-  lifecycle { prevent_destroy = false }
-}
+#   private_service_connection {
+#     name                           = "psc-ws-${var.prefix}"
+#     private_connection_resource_id = module.avm_res_desktopvirtualization_workspace.resource.id
+#     is_manual_connection           = false
+#     subresource_names              = ["feed"]
+#   }
+
+#   private_dns_zone_group {
+#     name                 = "dns-ws-${var.prefix}"
+#     private_dns_zone_ids = [data.azurerm_private_dns_zone.avd_feed_dns.id]
+#   }
+
+#   depends_on = [module.avm_res_desktopvirtualization_workspace]
+#   lifecycle { prevent_destroy = false }
+# }
 
 
 
@@ -206,77 +206,77 @@ resource "azurerm_private_endpoint" "hostpool_pe" {
 }
 
 
-resource "time_offset" "avd_registration_token_expiry" {
-  count = var.avd_host_pool_id == null ? 0 : 1
+# resource "time_offset" "avd_registration_token_expiry" {
+#   count = var.avd_host_pool_id == null ? 0 : 1
 
-  offset_hours = var.avd_registration_token_expiry_hours
-}
-
-resource "azurerm_virtual_desktop_host_pool_registration_info" "avd" {
-  count = var.avd_host_pool_id == null ? 0 : 1
-
-  hostpool_id     = var.avd_host_pool_id
-  expiration_date = time_offset.avd_registration_token_expiry[0].rfc3339
-}
-
-
-resource "random_password" "local" {
-  length           = var.local_password_length
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
-locals {
-  key_vault_secrets = merge(
-    {
-      local_password = {
-        name = var.local_password_secret_name
-      }
-    },
-    var.avd_host_pool_id == null ? {} : {
-      avd_registration_token = {
-        name            = var.avd_registration_token_secret_name
-        content_type    = "AVD host pool registration token"
-        expiration_date = time_offset.avd_registration_token_expiry[0].rfc3339
-      }
-    }
-  )
-
-  key_vault_secret_values = merge(
-    {
-      local_password = random_password.local.result
-    },
-    var.avd_host_pool_id == null ? {} : {
-      avd_registration_token = azurerm_virtual_desktop_host_pool_registration_info.avd[0].token
-    }
-  )
-}
-
-# resource "time_sleep" "wait_for_private_link" {
-#   create_duration = var.private_link_secret_wait_duration
-
-#   depends_on = [
-#     module.key_vault,
-#     azurerm_private_dns_zone_virtual_network_link.key_vault
-#   ]
+#   offset_hours = var.avd_registration_token_expiry_hours
 # }
 
-data "avm_res_keyvault_vault" "key_vault" {
-  name                = var.keyvault_name
-  resource_group_name = azurerm_resource_group.service_objects.name
-}
+# resource "azurerm_virtual_desktop_host_pool_registration_info" "avd" {
+#   count = var.avd_host_pool_id == null ? 0 : 1
 
-resource "azurerm_key_vault_secret" "this" {
-  for_each = local.key_vault_secrets
+#   hostpool_id     = var.avd_host_pool_id
+#   expiration_date = time_offset.avd_registration_token_expiry[0].rfc3339
+# }
 
-  name            = each.value.name
-  value           = local.key_vault_secret_values[each.key]
-  key_vault_id    = data.avm_res_keyvault_vault.key_vault.id
-  content_type    = try(each.value.content_type, null)
-  expiration_date = try(each.value.expiration_date, null)
 
-  # depends_on = [time_sleep.wait_for_private_link]
-}
+# resource "random_password" "local" {
+#   length           = var.local_password_length
+#   special          = true
+#   override_special = "!#$%&*()-_=+[]{}<>:?"
+# }
+
+# locals {
+#   key_vault_secrets = merge(
+#     {
+#       local_password = {
+#         name = var.local_password_secret_name
+#       }
+#     },
+#     var.avd_host_pool_id == null ? {} : {
+#       avd_registration_token = {
+#         name            = var.avd_registration_token_secret_name
+#         content_type    = "AVD host pool registration token"
+#         expiration_date = time_offset.avd_registration_token_expiry[0].rfc3339
+#       }
+#     }
+#   )
+
+#   key_vault_secret_values = merge(
+#     {
+#       local_password = random_password.local.result
+#     },
+#     var.avd_host_pool_id == null ? {} : {
+#       avd_registration_token = azurerm_virtual_desktop_host_pool_registration_info.avd[0].token
+#     }
+#   )
+# }
+
+# # resource "time_sleep" "wait_for_private_link" {
+# #   create_duration = var.private_link_secret_wait_duration
+
+# #   depends_on = [
+# #     module.key_vault,
+# #     azurerm_private_dns_zone_virtual_network_link.key_vault
+# #   ]
+# # }
+
+# data "avm_res_keyvault_vault" "key_vault" {
+#   name                = var.keyvault_name
+#   resource_group_name = azurerm_resource_group.service_objects.name
+# }
+
+# resource "azurerm_key_vault_secret" "this" {
+#   for_each = local.key_vault_secrets
+
+#   name            = each.value.name
+#   value           = local.key_vault_secret_values[each.key]
+#   key_vault_id    = data.avm_res_keyvault_vault.key_vault.id
+#   content_type    = try(each.value.content_type, null)
+#   expiration_date = try(each.value.expiration_date, null)
+
+#   # depends_on = [time_sleep.wait_for_private_link]
+# }
 
 
 
