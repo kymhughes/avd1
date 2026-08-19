@@ -1,10 +1,3 @@
-# resource "azurerm_resource_group" "this" {
-#   count = var.create_resource_group ? 1 : 0
-
-#   name     = var.resource_group_name
-#   location = var.location
-#   tags     = var.tags
-# }
 
 data "azurerm_resource_group" "existing" {
   name = var.rg_network
@@ -14,18 +7,6 @@ data "azurerm_virtual_network" "existing" {
   name                = var.vnet_name
   resource_group_name = var.rg_network
 }
-
-
-# resource "azurerm_resource_group" "this" {
-#   for_each = {
-#     for k, v in var.subnets :
-#     k => v
-#     if try(v.name, null) != null
-#   }
-
-#   name     = "rg-${each.value.name}"
-#   location = var.avdLocation
-# }
 
 resource "azurerm_subnet" "this" {
   for_each = var.subnets
@@ -69,9 +50,6 @@ resource "azurerm_network_security_group" "subnet" {
 
 
 locals {
-  #resource_group_name     = data.azurerm_resource_group.existing[0].name
-  #resource_group_location = data.azurerm_resource_group.existing[0].location
-
   subnet_nsg_associations = {
     for subnet_key, subnet in var.subnets : subnet_key => subnet
     if try(subnet.nsg.create, false) || try(subnet.nsg.existing_network_security_group_id, null) != null
@@ -89,20 +67,6 @@ locals {
       ] if try(subnet.nsg.create, false)
     ]) : item.key => item
   }
-
-  #   reverse_vnet_peerings = {
-  #     for peering_key, peering in var.vnet_peerings : peering_key => peering
-  #     if peering.create_reverse_peering
-  #   }
-  # }
-
-  # resource "azurerm_virtual_network" "this" {
-  #   name                = var.vnet_name
-  #   location            = local.resource_group_location
-  #   resource_group_name = local.resource_group_name
-  #   address_space       = var.vnet_address_space
-  #   dns_servers         = var.dns_servers
-  #   tags                = var.tags
 }
 
 
@@ -157,36 +121,3 @@ resource "azurerm_subnet_network_security_group_association" "this" {
     : each.value.nsg.existing_network_security_group_id
   )
 }
-
-# resource "azurerm_virtual_network_peering" "local_to_remote" {
-#   for_each = var.vnet_peerings
-
-#   name                      = coalesce(each.value.local_peering_name, "peer-${var.vnet_name}-to-${each.key}")
-#   resource_group_name       = local.resource_group_name
-#   virtual_network_name      = azurerm_virtual_network.this.name
-#   remote_virtual_network_id = each.value.remote_virtual_network_id
-
-#   allow_virtual_network_access = each.value.allow_virtual_network_access
-#   allow_forwarded_traffic      = each.value.allow_forwarded_traffic
-#   allow_gateway_transit        = each.value.allow_gateway_transit
-#   use_remote_gateways          = each.value.use_remote_gateways
-# }
-
-# resource "azurerm_virtual_network_peering" "remote_to_local" {
-#   provider = azurerm.remote
-#   for_each = local.reverse_vnet_peerings
-
-#   name                      = coalesce(each.value.reverse_peering_name, "peer-${each.key}-to-${var.vnet_name}")
-#   resource_group_name       = each.value.remote_resource_group_name
-#   virtual_network_name      = each.value.remote_virtual_network_name
-#   remote_virtual_network_id = azurerm_virtual_network.this.id
-
-#   allow_virtual_network_access = each.value.allow_virtual_network_access
-#   allow_forwarded_traffic      = each.value.allow_forwarded_traffic
-#   allow_gateway_transit        = each.value.reverse_allow_gateway_transit
-#   use_remote_gateways          = each.value.reverse_use_remote_gateways
-
-#   depends_on = [
-#     azurerm_virtual_network_peering.local_to_remote
-#   ]
-# }
