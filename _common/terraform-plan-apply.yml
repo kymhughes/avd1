@@ -18,7 +18,7 @@ parameters:
 
 stages:
   - stage: Terraform
-    displayName: Terraform
+    displayName: Terraform plan (doDestroy=${{ parameters.doDestroy }})
     jobs:
       - job: Apply
         displayName: Terraform apply (${{ parameters.environmentName }})
