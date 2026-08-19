@@ -6,7 +6,10 @@ trigger: none
 #  paths:
 #    include:
 #      - 00-inplace-network/*
-
+pool:
+  name: devopspool1
+  #name: Azure Pipelines
+  
 variables:
   tfFolder: 00-inplace-network
   azureServiceConnection: sp-avd-lab
@@ -15,9 +18,7 @@ variables:
   backendResourceGroupName: rg-tfstore
   backendStorageAccountName: tfstore101
 
-pool:
-  name: devopspool1
-  #name: Azure Pipelines
+
 
 parameters:
   - name: doPause
