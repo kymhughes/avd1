@@ -42,14 +42,14 @@ data "azurerm_private_dns_zone" "avd_feed_dns" {
 
 # ── Workspace Private Endpoint (feed) ───────────────────────────────────
 resource "azurerm_private_endpoint" "workspace_pe" {
-  name                = "pe-avd-ws-${var.prefix}"
+  name                = var.workspace_pe_name
   resource_group_name = azurerm_resource_group.service_objects.name
   location            = var.avdLocation
   subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_workspace}"
   tags                = var.tags
 
   private_service_connection {
-    name                           = "psc-ws-${var.prefix}"
+    name                           = var.workspace_sc_name
     private_connection_resource_id = module.avm_res_desktopvirtualization_workspace.resource.id
     is_manual_connection           = false
     subresource_names              = ["feed"]

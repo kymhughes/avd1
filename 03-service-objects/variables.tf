@@ -75,3 +75,12 @@ variable "pesubnet_workspace" {
   type        = string
   description = "Workspace private endpoint subnet name."
 }
+
+variable "workspace_pe_name" {
+  type        = string
+  description = "Workspace private endpoint name."
+}
+variable "workspace_sc_name" {
+  type        = string
+  description = "Workspace service connection name."
+}
