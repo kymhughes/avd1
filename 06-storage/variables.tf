@@ -13,6 +13,12 @@ variable "environment" {
   description = "dev | test | prod"
 }
 
+variable "tenant_id" {
+  type        = string
+  description = "Azure tenant ID."
+  default     = null
+}
+
 variable "spoke_subscription_id" {
   type        = string
   description = "Spoke subscription ID"
@@ -21,6 +27,18 @@ variable "spoke_subscription_id" {
 variable "hub_subscription_id" {
   type        = string
   description = "Hub subscription ID"
+}
+
+variable "tags" {
+  type        = map(string)
+  description = "Tags applied to supported resources."
+  default     = {}
+}
+
+variable "enable_telemetry" {
+  type        = bool
+  description = "Enable telemetry for AVM modules."
+  default     = true
 }
 
 variable "rg_storage_name" {

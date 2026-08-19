@@ -13,9 +13,39 @@ variable "environment" {
   description = "dev | test | prod"
 }
 
+variable "tenant_id" {
+  type        = string
+  description = "Azure tenant ID."
+  default     = null
+}
+
 variable "spoke_subscription_id" {
   type        = string
   description = "Spoke subscription ID"
+}
+
+variable "hub_subscription_id" {
+  type        = string
+  description = "Hub subscription ID."
+  default     = null
+}
+
+variable "tags" {
+  type        = map(string)
+  description = "Tags applied to supported resources."
+  default     = {}
+}
+
+variable "enable_telemetry" {
+  type        = bool
+  description = "Enable telemetry for AVM modules."
+  default     = true
+}
+
+variable "hub_dns_zone_rg" {
+  type        = string
+  description = "Hub resource group containing private DNS zones."
+  default     = null
 }
 
 variable "rg_compute_name" {

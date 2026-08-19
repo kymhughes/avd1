@@ -13,6 +13,12 @@ variable "prefix" {
   description = "Short prefix for resource naming."
 }
 
+variable "environment" {
+  type        = string
+  description = "Environment name."
+  default     = null
+}
+
 variable "spoke_subscription_id" {
   type        = string
   description = "Azure subscription ID for the AVD spoke workload."
