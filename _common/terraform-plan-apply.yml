@@ -190,7 +190,7 @@ stages:
 
                 plan_args=(-out=tfplan)
 
-                if [ "${do_destroy}" = "True" ] || [ "${do_destroy}" = "true" ]; then
+                if [ "${doDestroy}" = "true" ]; then
                   plan_args=(-destroy -out=tfplan)
                 fi
 
