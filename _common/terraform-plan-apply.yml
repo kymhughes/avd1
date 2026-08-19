@@ -12,7 +12,9 @@ parameters:
   terraformCommonVarFile: ''
   terraformVarFile: ''
   terraformVersion: '1.15.8'
-  #terraformVersion: '1.9.8'
+  doPause: false
+  doDestroy: false
+  env: 'npd'
 
 stages:
   - stage: Terraform
