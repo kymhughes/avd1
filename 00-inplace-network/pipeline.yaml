@@ -21,6 +21,15 @@ parameters:
   - name: doDestroy
     type: boolean
     default: false
+    
+
+  - name: environmentSection
+    displayName: '──────── Select environments ────────'
+    type: string
+    default: 'Choose which environments to run'
+    values:
+      - 'Choose which environments to run'
+  
   - name: deployNpd
     displayName: Deploy NPD
     type: boolean
