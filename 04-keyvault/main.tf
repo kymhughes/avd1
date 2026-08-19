@@ -43,7 +43,6 @@ module "avm_res_keyvault_vault" {
   public_network_access_enabled = false
   purge_protection_enabled      = false
   #soft_delete_retention_days    = 90
-  rbac_authorization_enabled = true
 
   network_acls = {
     bypass         = "None"
