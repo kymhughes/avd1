@@ -56,36 +56,4 @@ stages:
       terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/$(tfFolder)
       runStage: ${{ parameters.deployNpd }}
 
-  - template: ../_common/terraform-plan-apply.yml
-    parameters:
-      stageName: TST
-      environmentName: tst
-      dependsOn: NPD
-      doDestroy: ${{ parameters.doDestroy }}
-      azureServiceConnection: $(azureServiceConnection)
-      deploymentSubscriptionId: $(deploymentSubscriptionId)
-      stateSubscriptionId: $(stateSubscriptionId)
-      backendResourceGroupName: $(backendResourceGroupName)
-      backendStorageAccountName: $(backendStorageAccountName)
-      backendStateKey: tst-$(tfFolder).tfstate
-      terraformCommonVarFile: ../_environment/tst.tfvars
-      terraformVarFile: tst.tfvars
-      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/$(tfFolder)
-      runStage: ${{ parameters.deployTst }}
 
-  - template: ../_common/terraform-plan-apply.yml
-    parameters:
-      stageName: PRD
-      environmentName: prd
-      dependsOn: TST
-      doDestroy: ${{ parameters.doDestroy }}
-      azureServiceConnection: $(azureServiceConnection)
-      deploymentSubscriptionId: $(deploymentSubscriptionId)
-      stateSubscriptionId: $(stateSubscriptionId)
-      backendResourceGroupName: $(backendResourceGroupName)
-      backendStorageAccountName: $(backendStorageAccountName)
-      backendStateKey: prd-$(tfFolder).tfstate
-      terraformCommonVarFile: ../_environment/prd.tfvars
-      terraformVarFile: prd.tfvars
-      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/$(tfFolder)
-      runStage: ${{ parameters.deployPrd }}
