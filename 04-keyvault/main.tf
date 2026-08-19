@@ -51,11 +51,11 @@ module "avm_res_keyvault_vault" {
 
   private_endpoints = {
     vault = {
-      name                            = "${var.keyvault_name}-pe"
+      name                            = var.keyvault_pe_name
       subnet_resource_id              = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_keyvault}"
       private_dns_zone_group_name     = "default"
       private_dns_zone_resource_ids   = [data.azurerm_private_dns_zone.kv_dns.id]
-      private_service_connection_name = "${var.keyvault_name}-psc"
+      private_service_connection_name = var.keyvault_sc_name
       location                        = var.avdLocation
       resource_group_name             = data.azurerm_resource_group.service_objects.name
     }
