@@ -28,7 +28,7 @@ stages:
 
     jobs:
       - job: Terraform
-        displayName: Terraform ${{ parameters.environmentName }} doDestroy=${{ parameters.doDestroy }}
+        displayName: ${{ parameters.environmentName }} doDestroy=${{ parameters.doDestroy }}
         steps:
           - checkout: self
 
