@@ -95,7 +95,8 @@ module "avm_res_desktopvirtualization_applicationgroup" {
   role_assignments = {
     avd_users = {
       role_definition_id_or_name = "Desktop Virtualization User"
-      principal_id               = data.azuread_group.avd_users.object_id
+      #principal_id               = data.azuread_group.avd_users.object_id
+      principal_id = "60de146c-3d1a-46b6-839a-fd84d669b465"
     }
   }
 }
