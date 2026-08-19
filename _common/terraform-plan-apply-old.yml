@@ -187,11 +187,6 @@ stages:
                 export TF_VAR_environment="${environment_name}"
 
                 plan_args=(-out=tfplan)
-
-		if [ "${do_destroy}" = "True" ] || [ "${do_destroy}" = "true" ]; then
-		  plan_args=(-destroy -out=tfplan)
-		fi
-
                 if [ -n "${terraform_common_var_file}" ]; then
                   plan_args+=("-var-file=${terraform_common_var_file}")
                 fi
