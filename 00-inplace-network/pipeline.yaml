@@ -26,7 +26,7 @@ parameters:
   - name: environmentSection
     displayName: '──────── Select environments ────────'
     type: string
-    default: 'Choose which environments to run'
+    default: 'Choose environments to run - will run in sequence'
     values:
       - 'Choose which environments to run'
   
