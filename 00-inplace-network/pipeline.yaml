@@ -1,82 +1,96 @@
 trigger: none
 # trigger:
-#  branches:
-#    include:
-#      - main
-#  paths:
-#    include:
-#      - 00-inplace-network/*
-
-pool:
-  name: devopspool1
-  #name: Azure Pipelines
+#   branches:
+#     include:
+#       - main
+#   paths:
+#     include:
+#       - 00-inplace-network/*
+#       - _common/*
+#       - _environment/*
 
 variables:
   tfFolder: 00-inplace-network
+  azureServiceConnection: sp-avd-lab
+  deploymentSubscriptionId: e4ea360b-bf76-47bc-bb09-81bd23faad9e
+  stateSubscriptionId: eb60ae18-0772-4810-8616-c189bb571c25
+  backendResourceGroupName: rg-tfstore
+  backendStorageAccountName: tfstore101
+
+pool:
+  name: devopspool1
 
 parameters:
-  - name: doPause
-    type: boolean
-    default: false
   - name: doDestroy
+    displayName: Destroy resources
     type: boolean
     default: false
-    
 
-  - name: environmentSection
-    displayName: '──────── Select environments ────────'
-    type: string
-    default: 'Choose environments to run - will run in sequence'
-    values:
-      - 'Choose which environments to run'
-  
   - name: deployNpd
-    displayName: Deploy NPD
+    displayName: Environment: NPD
     type: boolean
     default: true
 
   - name: deployTst
-    displayName: Deploy TST
+    displayName: Environment: TST
     type: boolean
     default: false
 
   - name: deployPrd
-    displayName: Deploy PRD
+    displayName: Environment: PRD
     type: boolean
     default: false
 
 stages:
-- ${{ if eq(parameters.deployNpd, true) }}:
-  - stage: NPD
-    displayName: NPD
-    jobs:
-    - template: ../_common/terraform-plan-apply.yml
-      parameters:
-        environmentName: npd
-        terraformCommonVarFile: ../_environment/npd.tfvars
-        terraformVarFile: npd.tfvars
-        backendStateKey: npd-$(tfFolder).tfstate
+  - template: ../_common/terraform-plan-apply.yml
+    parameters:
+      stageName: NPD
+      environmentName: npd
+      doDestroy: ${{ parameters.doDestroy }}
+      azureServiceConnection: $(azureServiceConnection)
+      deploymentSubscriptionId: $(deploymentSubscriptionId)
+      stateSubscriptionId: $(stateSubscriptionId)
+      backendResourceGroupName: $(backendResourceGroupName)
+      backendStorageAccountName: $(backendStorageAccountName)
+      backendStateKey: npd-$(tfFolder).tfstate
+      terraformCommonVarFile: ../_environment/npd.tfvars
+      terraformVarFile: npd.tfvars
+      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/$(tfFolder)
+      runStage: ${{ parameters.deployNpd }}
 
-- ${{ if eq(parameters.deployTst, true) }}:
-  - stage: TST
-    displayName: TST
-    dependsOn: NPD
-    jobs:
-    - template: ../_common/terraform-plan-apply.yml
-      parameters:
-        environmentName: tst
-        terraformCommonVarFile: ../_environment/tst.tfvars
-        terraformVarFile: tst.tfvars
-        backendStateKey: tst-$(tfFolder).tfstate
+  - template: ../_common/terraform-plan-apply.yml
+    parameters:
+      stageName: TST
+      environmentName: tst
+      dependsOn: NPD
+      doDestroy: ${{ parameters.doDestroy }}
+      azureServiceConnection: $(azureServiceConnection)
+      deploymentSubscriptionId: $(deploymentSubscriptionId)
+      stateSubscriptionId: $(stateSubscriptionId)
+      backendResourceGroupName: $(backendResourceGroupName)
+      backendStorageAccountName: $(backendStorageAccountName)
+      backendStateKey: tst-$(tfFolder).tfstate
+      terraformCommonVarFile: ../_environment/tst.tfvars
+      terraformVarFile: tst.tfvars
+      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/$(tfFolder)
+      runStage: ${{ parameters.deployTst }}
 
-- ${{ if eq(parameters.deployPrd, true) }}:
-  - stage: PRD
-    displayName: PRD
-    dependsOn: TST
-    jobs:
-    - template: ../_common/terraform-plan-apply.yml
-      parameters:
-        environmentName: prd
-        terraformCommonVarFile: ../_environment/prd.tfvars
-        terraformVarFile: prd.tfvars
-        backendStateKey: prd-$(tfFolder).tfstate
+  - template: ../_common/terraform-plan-apply.yml
+    parameters:
+      stageName: PRD
+      environmentName: prd
+      dependsOn: TST
+      doDestroy: ${{ parameters.doDestroy }}
+      azureServiceConnection: $(azureServiceConnection)
+      deploymentSubscriptionId: $(deploymentSubscriptionId)
+      stateSubscriptionId: $(stateSubscriptionId)
+      backendResourceGroupName: $(backendResourceGroupName)
+      backendStorageAccountName: $(backendStorageAccountName)
+      backendStateKey: prd-$(tfFolder).tfstate
+      terraformCommonVarFile: ../_environment/prd.tfvars
+      terraformVarFile: prd.tfvars
+      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/$(tfFolder)
+      runStage: ${{ parameters.deployPrd }}
+```
+
+To support that, the common template needs parameters like `stageName`, `dependsOn`, and `runStage`; otherwise every included template creates the same stage name `Terraform`, which will collide.
