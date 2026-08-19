@@ -1,6 +1,6 @@
-rg_so              = "rg-it01-service-objects-npd"
+rg_so              = "rg-service-objects-npd"
 user_group_name    = "avd_users_cloud"
-workspace_name     = "workspace-itm"
+workspace_name     = "workspace-npd"
 rg_network         = "rg-itm-network-npd"
 vnet_name          = "vnet-itm-vnet-npd"
 pesubnet_workspace = "snet-general-pe"

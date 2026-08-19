@@ -1,0 +1,6 @@
+rg_so              = "rg-service-objects-tst"
+user_group_name    = "avd_users_cloud"
+workspace_name     = "workspace-tst"
+rg_network         = "rg-itm-network-tst"
+vnet_name          = "vnet-itm-vnet-tst"
+pesubnet_workspace = "snet-general-pe"
