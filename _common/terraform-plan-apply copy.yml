@@ -40,17 +40,14 @@ stages:
               echo "##vso[task.prependpath]${terraform_dir}"
               "${terraform_dir}/terraform" version
 
-              echo "Checking Routes"
-
+              echo "Adding routes due to clash of Devops pool address range"
               ip route get 172.17.10.6
               gateway="$(ip route show default | awk '{print $3; exit}')"
               sudo ip route replace 172.17.10.6/32 via "$gateway" dev eth0
-
               ip route get 172.17.100.248
               gateway="$(ip route show default | awk '{print $3; exit}')"
               sudo ip route replace 172.17.100.248/32 via "$gateway" dev eth0
 
-              echo "done Checking Routes"
 
 
             displayName: Install Terraform
