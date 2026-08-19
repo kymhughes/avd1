@@ -1,5 +1,5 @@
 rg_so             = "rg-service-objects-npd"
-keyvault_name     = "kv-avd-it01-npd"
+keyvault_name     = "kv-avd-itm-npd"
 rg_network        = "rg-itm-network-npd"
 vnet_name         = "vnet-itm-vnet-npd"
 pesubnet_keyvault = "snet-general-pe"
