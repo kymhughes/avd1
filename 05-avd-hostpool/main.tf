@@ -20,10 +20,11 @@ resource "azurerm_resource_group" "compute" {
 
 data "azurerm_client_config" "current" {}
 
-data "azuread_group" "avd_users" {
-  display_name     = var.user_group_name
-  security_enabled = true
-}
+# Commended out temporarily due to missing Entra ID access
+# data "azuread_group" "avd_users" {
+#   display_name     = var.user_group_name
+#   security_enabled = true
+# }
 
 resource "random_string" "suffix" {
   length  = 4
