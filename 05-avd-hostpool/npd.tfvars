@@ -1,4 +1,4 @@
-rg_so                                  = "rg-it01-service-objects-npd"
+rg_so                                  = "rg-service-objects-npd"
 rg_pool                                = "rg-it01-pool-npd"
 user_group_name                        = "avd_users_cloud"
 hostpool_name                          = "pool-itm001"
