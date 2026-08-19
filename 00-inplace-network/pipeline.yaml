@@ -21,31 +21,53 @@ parameters:
   - name: doDestroy
     type: boolean
     default: false
-  - name: env
-    displayName: Select environment
-    type: string
-    default: 'npd'
-    values:
-      - npd
-      - tst
-      - prd
+  - name: deployNpd
+    displayName: Deploy NPD
+    type: boolean
+    default: true
+
+  - name: deployTst
+    displayName: Deploy TST
+    type: boolean
+    default: false
+
+  - name: deployPrd
+    displayName: Deploy PRD
+    type: boolean
+    default: false
 
 stages:
-  - template: ../_common/terraform-plan-apply.yml
-    parameters:
-      environmentName:            '${{ parameters.env }}'
-      azureServiceConnection:     'sp-avd-lab'
-      deploymentSubscriptionId:   'e4ea360b-bf76-47bc-bb09-81bd23faad9e'
-      backendStateKey:            '${{ parameters.env }}-$(tfFolder).tfstate'
+- ${{ if eq(parameters.deployNpd, true) }}:
+  - stage: NPD
+    displayName: NPD
+    jobs:
+    - template: ../_common/terraform-plan-apply.yml
+      parameters:
+        environmentName: npd
+        terraformCommonVarFile: ../_environment/npd.tfvars
+        terraformVarFile: npd.tfvars
+        backendStateKey: npd-$(tfFolder).tfstate
 
-      doPause:                    '${{ parameters.doPause }}'
-      doDestroy:                  '${{ parameters.doDestroy }}'
-      env:                        '${{ parameters.env }}'
+- ${{ if eq(parameters.deployTst, true) }}:
+  - stage: TST
+    displayName: TST
+    dependsOn: NPD
+    jobs:
+    - template: ../_common/terraform-plan-apply.yml
+      parameters:
+        environmentName: tst
+        terraformCommonVarFile: ../_environment/tst.tfvars
+        terraformVarFile: tst.tfvars
+        backendStateKey: tst-$(tfFolder).tfstate
 
-      terraformCommonVarFile:     '../_environment/${{ parameters.env }}.tfvars'
-      terraformVarFile:           '${{ parameters.env }}.tfvars'
-      terraformWorkingDirectory:  '$(System.DefaultWorkingDirectory)/$(tfFolder)'
-      stateSubscriptionId:        'eb60ae18-0772-4810-8616-c189bb571c25'
-      backendResourceGroupName:   'rg-tfstore'
-      backendStorageAccountName:  'tfstore101'
-      
+- ${{ if eq(parameters.deployPrd, true) }}:
+  - stage: PRD
+    displayName: PRD
+    dependsOn: TST
+    jobs:
+    - template: ../_common/terraform-plan-apply.yml
+      parameters:
+        environmentName: prd
+        terraformCommonVarFile: ../_environment/prd.tfvars
+        terraformVarFile: prd.tfvars
+        backendStateKey: prd-$(tfFolder).tfstate
