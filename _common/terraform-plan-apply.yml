@@ -190,9 +190,10 @@ stages:
 
                 plan_args=(-out=tfplan)
 
-                if [ '${{ parameters.doDestroy }}' = "true" ]; then
-                  plan_args=(-destroy -out=tfplan)
+                if [ '${{ parameters.doDestroy }}' = "true" ] || [ '${{ parameters.doDestroy }}' = "True" ]; then
+                  plan_args=(-destroy "${plan_args[@]}")
                 fi
+
 
                 # if [ -n "${terraform_common_var_file}" ]; then
                 #   plan_args+=("-var-file=${terraform_common_var_file}")
