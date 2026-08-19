@@ -91,6 +91,3 @@ stages:
       terraformVarFile: prd.tfvars
       terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/$(tfFolder)
       runStage: ${{ parameters.deployPrd }}
-```
-
-To support that, the common template needs parameters like `stageName`, `dependsOn`, and `runStage`; otherwise every included template creates the same stage name `Terraform`, which will collide.
