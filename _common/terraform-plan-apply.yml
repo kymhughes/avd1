@@ -194,9 +194,9 @@ stages:
                   plan_args=(-destroy -out=tfplan)
                 fi
 
-                if [ -n "${terraform_common_var_file}" ]; then
-                  plan_args+=("-var-file=${terraform_common_var_file}")
-                fi
+                # if [ -n "${terraform_common_var_file}" ]; then
+                #   plan_args+=("-var-file=${terraform_common_var_file}")
+                # fi
                 if [ -n "${terraform_var_file}" ]; then
                   plan_args+=("-var-file=${terraform_var_file}")
                 fi
