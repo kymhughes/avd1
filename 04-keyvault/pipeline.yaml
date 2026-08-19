@@ -6,53 +6,86 @@ trigger: none
 #  paths:
 #    include:
 #      - 04-keyvault/*
-
-variables:
-  tfFolder: 04-keyvault
-  doPause: false
-  doDestroy: false
-  env: 'npd'
-  # doPause: '${{ parameters.doPause }}'
-  # doDestroy: '${{ parameters.doDestroy }}'
-  # env: '${{ parameters.env }}'
-
-# parameters:
-#   - name: doPause
-#     type: boolean
-#     default: false
-#   - name: doDestroy
-#     type: boolean
-#     default: false
-#   - name: env
-#     displayName: Select environment
-#     type: string
-#     default: 'npd'
-#     values:
-#       - npd
-#       - tst
-#       - prd
-
 pool:
   name: devopspool1
   #name: Azure Pipelines
 
+variables:
+  tfFolder: 04-keyvault
+  azureServiceConnection: sp-avd-lab
+  deploymentSubscriptionId: e4ea360b-bf76-47bc-bb09-81bd23faad9e
+  stateSubscriptionId: eb60ae18-0772-4810-8616-c189bb571c25
+  backendResourceGroupName: rg-tfstore
+  backendStorageAccountName: tfstore101
+
+parameters:
+  - name: doDestroy
+    displayName: Destroy resources
+    type: boolean
+    default: false
+
+  - name: deployNpd
+    displayName: 'Environment: NPD'
+    type: boolean
+    default: true
+
+  - name: deployTst
+    displayName: 'Environment: TST'
+    type: boolean
+    default: false
+
+  - name: deployPrd
+    displayName: 'Environment: PRD'
+    type: boolean
+    default: false
+
 stages:
   - template: ../_common/terraform-plan-apply.yml
     parameters:
-      environmentName:            '${{variables.env}}'
+      stageName: NPD
+      environmentName: npd
+      doDestroy: ${{ parameters.doDestroy }}
+      azureServiceConnection: $(azureServiceConnection)
+      deploymentSubscriptionId: $(deploymentSubscriptionId)
+      stateSubscriptionId: $(stateSubscriptionId)
+      backendResourceGroupName: $(backendResourceGroupName)
+      backendStorageAccountName: $(backendStorageAccountName)
+      backendStateKey: npd-$(tfFolder).tfstate
+      terraformCommonVarFile: ../_environment/npd.tfvars
+      terraformVarFile: npd.tfvars
+      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/$(tfFolder)
+      runStage: ${{ parameters.deployNpd }}
 
-      azureServiceConnection:     'sp-avd-lab'
-      deploymentSubscriptionId:   'e4ea360b-bf76-47bc-bb09-81bd23faad9e'
-      backendStateKey:            '${{variables.env}}-$(tfFolder).tfstate'
+  - template: ../_common/terraform-plan-apply.yml
+    parameters:
+      stageName: TST
+      environmentName: tst
+      dependsOn: NPD
+      doDestroy: ${{ parameters.doDestroy }}
+      azureServiceConnection: $(azureServiceConnection)
+      deploymentSubscriptionId: $(deploymentSubscriptionId)
+      stateSubscriptionId: $(stateSubscriptionId)
+      backendResourceGroupName: $(backendResourceGroupName)
+      backendStorageAccountName: $(backendStorageAccountName)
+      backendStateKey: tst-$(tfFolder).tfstate
+      terraformCommonVarFile: ../_environment/tst.tfvars
+      terraformVarFile: tst.tfvars
+      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/$(tfFolder)
+      runStage: ${{ parameters.deployTst }}
 
-      doPause:                    '${{variables.doPause}}'
-      doDestroy:                  '${{variables.doDestroy}}'
-      env:                        '${{variables.env}}'
-
-      terraformCommonVarFile:     '../_environment/${{variables.env}}.tfvars'
-      terraformVarFile:           '${{variables.env}}.tfvars'
-      terraformWorkingDirectory:  '$(System.DefaultWorkingDirectory)/$(tfFolder)'
-      stateSubscriptionId:        'eb60ae18-0772-4810-8616-c189bb571c25'
-      backendResourceGroupName:   'rg-tfstore'
-      backendStorageAccountName:  'tfstore101'
-      
+  - template: ../_common/terraform-plan-apply.yml
+    parameters:
+      stageName: PRD
+      environmentName: prd
+      dependsOn: TST
+      doDestroy: ${{ parameters.doDestroy }}
+      azureServiceConnection: $(azureServiceConnection)
+      deploymentSubscriptionId: $(deploymentSubscriptionId)
+      stateSubscriptionId: $(stateSubscriptionId)
+      backendResourceGroupName: $(backendResourceGroupName)
+      backendStorageAccountName: $(backendStorageAccountName)
+      backendStateKey: prd-$(tfFolder).tfstate
+      terraformCommonVarFile: ../_environment/prd.tfvars
+      terraformVarFile: prd.tfvars
+      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/$(tfFolder)
+      runStage: ${{ parameters.deployPrd }}
