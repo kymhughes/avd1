@@ -1,0 +1,7 @@
+rg_so             = "rg-service-objects-tst"
+keyvault_name     = "kv-avd-it01-tst"
+rg_network        = "rg-itm-network-tst"
+vnet_name         = "vnet-itm-vnet-tst"
+pesubnet_keyvault = "snet-general-pe"
+keyvault_pe_name  = "keyvault-pe-tst"
+keyvault_sc_name  = "keyvault-sc-tst"
