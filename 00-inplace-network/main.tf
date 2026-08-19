@@ -1,15 +1,7 @@
-# ── Resource Groups for Azure Virtual Desktop ─────────────────────────────────
 
-# resource "azurerm_resource_group" "network" {
-#   location = var.avdLocation
-#   name     = var.rg_network
-#   tags     = var.tags
-#   lifecycle { prevent_destroy = false }
-# }
 
 # Network resource group (created here — not in module 01)
 resource "azurerm_resource_group" "net" {
-  #provider = azurerm.spoke
   location = var.avdLocation
   name     = var.rg_network
   tags     = var.tags
