@@ -71,3 +71,11 @@ variable "pesubnet_keyvault" {
   type        = string
   description = "Key Vault private endpoint subnet name."
 }
+variable "keyvault_pe_name" {
+  type        = string
+  description = "Key Vault private endpoint name."
+}
+variable "keyvault_sc_name" {
+  type        = string
+  description = "Key Vault service connection name."
+}
