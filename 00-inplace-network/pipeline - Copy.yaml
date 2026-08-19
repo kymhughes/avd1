@@ -7,7 +7,9 @@ trigger: none
 #    include:
 #      - 00-inplace-network/*
 
-
+pool:
+  name: devopspool1
+  #name: Azure Pipelines
 
 variables:
   tfFolder: 00-inplace-network
@@ -17,30 +19,22 @@ variables:
   backendResourceGroupName: rg-tfstore
   backendStorageAccountName: tfstore101
 
-pool:
-  name: devopspool1
-  #name: Azure Pipelines
 
 parameters:
+  - name: doPause
+    type: boolean
+    default: false
   - name: doDestroy
-    displayName: Destroy resources
     type: boolean
     default: false
-
-  - name: deployNpd
-    displayName: Environment: NPD
-    type: boolean
-    default: true
-
-  - name: deployTst
-    displayName: Environment: TST
-    type: boolean
-    default: false
-
-  - name: deployPrd
-    displayName: Environment: PRD
-    type: boolean
-    default: false
+  - name: env
+    displayName: Select environment
+    type: string
+    default: 'npd'
+    values:
+      - npd
+      - tst
+      - prd
 
 stages:
   - template: ../_common/terraform-plan-apply.yml
