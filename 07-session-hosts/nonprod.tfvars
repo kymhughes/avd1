@@ -1,16 +1,12 @@
 # 07-session-hosts — nonprod environment
 # vm_password, registration_token — PIPELINE SECRET VARIABLES, never in tfvars
-avdLocation           = "australiaeast"
-prefix                = "nprd"
-environment           = "nonprod"
-spoke_subscription_id = "00000000-0000-0000-0000-000000000001" # replace with nonprod spoke sub ID
-rdsh_count            = 2
-vm_size               = "Standard_D2s_v5"
-local_admin_username  = "avdadmin"
-publisher             = "MicrosoftWindowsDesktop"
-offer                 = "windows-11"
-sku                   = "win11-24h2-avd"
-image_version         = "latest"
+rdsh_count           = 2
+vm_size              = "Standard_D2s_v5"
+local_admin_username = "avdadmin"
+publisher            = "MicrosoftWindowsDesktop"
+offer                = "windows-11"
+sku                  = "win11-24h2-avd"
+image_version        = "latest"
 
 # From module 01 outputs
 rg_compute_name = "rg-avd-nprd-nonprod-australiaeast-pool-compute" # replace with actual value

@@ -42,8 +42,8 @@ stages:
       doDestroy:                  '${{ parameters.doDestroy }}'
       env:                        '${{ parameters.env }}'
 
-      terraformVarFile:           '../${{ parameters.env }}.tfvars'
-      tfVariablesFile:            '../variables.tf'    
+      terraformCommonVarFile:     '../_environment/${{ parameters.env }}.tfvars'
+      terraformVarFile:           '${{ parameters.env }}.tfvars'
       terraformWorkingDirectory:  '$(System.DefaultWorkingDirectory)/$(tfFolder)'
       stateSubscriptionId:        'eb60ae18-0772-4810-8616-c189bb571c25'
       backendResourceGroupName:   'rg-tfstore'

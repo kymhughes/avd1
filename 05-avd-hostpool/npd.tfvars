@@ -1,0 +1,10 @@
+rg_so                                  = "rg-it01-service-objects-npd"
+rg_pool                                = "rg-it01-pool-npd"
+user_group_name                        = "avd_users_cloud"
+hostpool_name                          = "pool-itm001"
+hostpool_start_vm_on_connect           = true
+hostpool_validate_environment          = true
+hostpool_custom_rdp_properties         = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
+app_group_name                         = "app-itm001"
+app_group_default_desktop_display_name = "itm001"
+scaling_plan_sp_id                     = "6774ae85-d784-4d45-9585-876477e8f6b7"

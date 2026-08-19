@@ -1,18 +1,14 @@
 # 07-session-hosts — dev environment
 # vm_password — PIPELINE SECRET VARIABLE, never in tfvars
 # Run once per app: set app_name to match the app_name used in module 05
-avdLocation           = "australiaeast"
-prefix                = "dev1"
-environment           = "dev"
-app_name              = "finance"
-spoke_subscription_id = "05e200dc-cec4-4234-8142-d2fe12e9d48f"
-rdsh_count            = 1
-vm_size               = "Standard_D2s_v5"
-local_admin_username  = "avdadmin"
-publisher             = "MicrosoftWindowsDesktop"
-offer                 = "windows-11"
-sku                   = "win11-24h2-avd"
-image_version         = "latest"
+app_name             = "finance"
+rdsh_count           = 1
+vm_size              = "Standard_D2s_v5"
+local_admin_username = "avdadmin"
+publisher            = "MicrosoftWindowsDesktop"
+offer                = "windows-11"
+sku                  = "win11-24h2-avd"
+image_version        = "latest"
 # hostpool_state_path — uncomment to override for per-app state files
 # hostpool_state_path = "../05-avd-hostpool-finance/terraform.tfstate"
 

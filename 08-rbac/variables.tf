@@ -13,11 +13,6 @@ variable "user_group_name" {
   description = "Azure AD security group for AVD users"
 }
 
-variable "application_group_id" {
-  type        = string
-  description = "AVD application group resource ID (from module 05: application_group_id)"
-}
-
 variable "rg_compute_id" {
   type        = string
   description = "Compute resource group ID (from module 01: rg_compute_id)"

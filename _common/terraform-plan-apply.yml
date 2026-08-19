@@ -9,6 +9,7 @@ parameters:
   backendStateKey: ''
   environmentName: ''
   terraformWorkingDirectory: ''
+  terraformCommonVarFile: ''
   terraformVarFile: ''
   terraformVersion: '1.15.8'
   #terraformVersion: '1.9.8'
@@ -129,15 +130,8 @@ stages:
 
               cd "${{parameters.terraformWorkingDirectory}}"
 
-              #vars_file='${{ parameters.terraformVarFile }}'
-              #cp "${vars_file}" .
-              cp ../variables.tf .
-                echo "Copied parent variables file into Terraform working directory"
-              
               ls -la 
               ls ../ -la
-
-
 
               terraform validate
               
@@ -183,6 +177,7 @@ stages:
 
                 deployment_subscription_id='${{ parameters.deploymentSubscriptionId }}'
                 environment_name='${{ parameters.environmentName }}'
+                terraform_common_var_file='${{ parameters.terraformCommonVarFile }}'
                 terraform_var_file='${{ parameters.terraformVarFile }}'
 
                 az account set --subscription "${deployment_subscription_id}"
@@ -192,6 +187,9 @@ stages:
                 export TF_VAR_environment="${environment_name}"
 
                 plan_args=(-out=tfplan)
+                if [ -n "${terraform_common_var_file}" ]; then
+                  plan_args+=("-var-file=${terraform_common_var_file}")
+                fi
                 if [ -n "${terraform_var_file}" ]; then
                   plan_args+=("-var-file=${terraform_var_file}")
                 fi
