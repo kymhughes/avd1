@@ -21,7 +21,7 @@ parameters:
 
 stages:
   - stage: ${{ parameters.stageName }}
-    displayName: Deploy ${{ parameters.displayName }}
+    displayName: 'Deploy ${{ parameters.displayName }}'
     condition: and(succeeded(), eq('${{ parameters.runStage }}', 'true'))
     ${{ if ne(parameters.dependsOn, '') }}:
       dependsOn: ${{ parameters.dependsOn }}
@@ -51,9 +51,9 @@ stages:
               ip route get 172.17.10.6
               gateway="$(ip route show default | awk '{print $3; exit}')"
               sudo ip route replace 172.17.10.6/32 via "$gateway" dev eth0
-              ip route get 172.17.100.248
+              ip route get 172.17.100.246
               gateway="$(ip route show default | awk '{print $3; exit}')"
-              sudo ip route replace 172.17.100.248/32 via "$gateway" dev eth0
+              sudo ip route replace 172.17.100.246/32 via "$gateway" dev eth0
 
             displayName: Install Terraform
 
