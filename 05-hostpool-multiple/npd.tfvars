@@ -29,10 +29,11 @@ host_pools = [
       imageInfo = {
         type = "Marketplace"
         marketplaceInfo = {
-          publisher    = "MicrosoftWindowsDesktop"
-          offer        = "windows-11"
-          sku          = "win11-25h2-avd"
-          exactVersion = "latest"
+          publisher = "MicrosoftWindowsDesktop"
+          offer     = "windows-11"
+          sku       = "win11-25h2-avd"
+          #exactVersion = "latest"
+          exactVersion = "26200.9168.260809"
         }
       }
 
