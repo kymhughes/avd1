@@ -32,10 +32,10 @@ dynamic_scaling_plan_schedules = [
     scalingMethod = "CreateDeletePowerManage"
 
     createDelete = {
-      rampUpMinimumHostPoolSize   = 1
-      rampUpMaximumHostPoolSize   = 2
-      rampDownMinimumHostPoolSize = 0
-      rampDownMaximumHostPoolSize = 2
+      rampUpMinimumHostPoolSize   = 1 #	Don’t pre-create hosts before demand.
+      rampUpMaximumHostPoolSize   = 2 # Never scale above 2 hosts during ramp-up.
+      rampDownMinimumHostPoolSize = 0 # Allow scale-down to zero.
+      rampDownMaximumHostPoolSize = 2 # Keep the max at 2 during ramp-down too.
     }
 
     rampUpStartTime = {
@@ -60,8 +60,8 @@ dynamic_scaling_plan_schedules = [
     rampDownLoadBalancingAlgorithm = "DepthFirst"
     offPeakLoadBalancingAlgorithm  = "DepthFirst"
 
-    rampUpMinimumHostsPct        = 00
-    rampUpCapacityThresholdPct   = 90
+    rampUpMinimumHostsPct        = 00 # Don’t keep any hosts on just for baseline.
+    rampUpCapacityThresholdPct   = 90 # Only scale up when existing capacity is nearly full.
     rampDownMinimumHostsPct      = 0
     rampDownCapacityThresholdPct = 90
 
