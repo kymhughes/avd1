@@ -26,9 +26,9 @@ data "azurerm_virtual_desktop_workspace" "this" {
 
 data "azurerm_client_config" "current" {}
 
-data "azuread_service_principal" "avd" {
-  client_id = "66080947-954d-4adb-933c-293d3bbb3441"
-}
+# data "azuread_service_principal" "avd" {
+#   client_id = "66080947-954d-4adb-933c-293d3bbb3441"
+# }
 
 #Assign nesssesary roles to the AVD service principal for dynamic autoscale to work
 resource "azurerm_role_assignment" "avd_reader" {
