@@ -187,6 +187,12 @@ variable "avd_users_principal_id" {
 #   description = "Object ID of the AVD service principal used for scaling plan power operations."
 # }
 
+variable "avd_service_principal_object_id" {
+  type        = string
+  description = "Object ID of the Azure Virtual Desktop service principal in this tenant."
+  default     = null
+}
+
 variable "host_pools" {
   description = "Host pools and matching desktop application groups to create."
   type = list(object({

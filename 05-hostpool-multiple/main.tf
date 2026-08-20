@@ -34,19 +34,19 @@ data "azuread_service_principal" "avd" {
 resource "azurerm_role_assignment" "avd_reader" {
   scope                = "/subscriptions/${var.spoke_subscription_id}"
   role_definition_name = "Reader"
-  principal_id         = data.azuread_service_principal.avd.object_id
+  principal_id         = var.avd_service_principal_object_id
 }
 
 resource "azurerm_role_assignment" "avd_power_on_off" {
   scope                = "/subscriptions/${var.spoke_subscription_id}"
   role_definition_name = "Desktop Virtualization Power On Off Contributor"
-  principal_id         = data.azuread_service_principal.avd.object_id
+  principal_id         = var.avd_service_principal_object_id
 }
 
 resource "azurerm_role_assignment" "avd_vm_contributor" {
   scope                = "/subscriptions/${var.spoke_subscription_id}"
   role_definition_name = "Desktop Virtualization Virtual Machine Contributor"
-  principal_id         = data.azuread_service_principal.avd.object_id
+  principal_id         = var.avd_service_principal_object_id
 }
 
 # Dynamic autoscale needs subscription-level permissions so the AVD service can
