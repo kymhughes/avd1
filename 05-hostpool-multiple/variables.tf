@@ -239,6 +239,7 @@ variable "host_pools" {
     hostpool_start_vm_on_connect           = optional(bool)
     hostpool_validate_environment          = optional(bool)
     hostpool_custom_rdp_properties         = optional(string)
+    session_host_subnet_name               = optional(string)
     session_host_configuration             = optional(any)
     create_registration_token              = optional(bool)
     registration_token_ttl                 = optional(string)

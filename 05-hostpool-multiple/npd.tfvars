@@ -22,22 +22,17 @@ host_pools = [
     scaling_plan_name                      = "sp-itm001-npd"
     scaling_plan_friendly_name             = "ITM001 NPD Dynamic Autoscale"
     scaling_plan_description               = "Default dynamic autoscale plan for ITM001 NPD."
+    session_host_subnet_name               = "snet-itm-001"
     session_host_configuration = {
       friendlyName = "ITM001 NPD session hosts"
       vmLocation   = "australiaeast"
       vmNamePrefix = "itm001"
       vmSizeId     = "Standard_D2s_v5"
 
-      # Windows 11 AVD image retained for reference.
-      # imageInfo = {
-      #   type = "Marketplace"
-      #   marketplaceInfo = {
-      #     publisher    = "MicrosoftWindowsDesktop"
+      #     publisher    = "MicrosoftWindowsDesktop"   # Windows 11 AVD image retained for reference.
       #     offer        = "windows-11"
       #     sku          = "win11-25h2-avd"
       #     exactVersion = "26200.9168.260809"
-      #   }
-      # }
 
       imageInfo = {
         type = "Marketplace"
@@ -61,10 +56,6 @@ host_pools = [
         #azureActiveDirectoryInfo = {       #Not applicable for server 2022
         #  mdmProviderGuid = "0000000a-0000-0000-c000-000000000000"
         #}
-      }
-
-      networkInfo = {
-        subnetId = "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd23faad9e/resourceGroups/rg-itm-network-npd/providers/Microsoft.Network/virtualNetworks/vnet-itm-vnet-npd/subnets/snet-itm-001"
       }
 
       securityInfo = {

@@ -1,5 +1,5 @@
 # 06-storage — npd environment
-rg_storage_name                      = "rg-avd-npd1-npd-australiaeast-storage"
+rg_storage_name                      = "rg-service-objects-npd"
 storage_account_name                 = "stavditmnpd001"
 storage_managed_identity_name        = "mi-avd-storage-itm-npd"
 fslogix_share_name                   = "fslogix"

@@ -115,7 +115,22 @@ resource "azurerm_role_assignment" "host_pool_mi_keyvault_secrets_user" {
 
 locals {
   host_pools = length(var.host_pools) > 0 ? {
-    for host_pool in var.host_pools : host_pool.name => host_pool
+    for host_pool in var.host_pools : host_pool.name => merge(
+      host_pool,
+      {
+        session_host_configuration = merge(
+          host_pool.session_host_configuration,
+          {
+            networkInfo = merge(
+              lookup(host_pool.session_host_configuration, "networkInfo", {}),
+              {
+                subnetId = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${host_pool.session_host_subnet_name}"
+              }
+            )
+          }
+        )
+      }
+    )
     } : var.hostpool_name == null || var.app_group_name == null ? {} : {
     (var.hostpool_name) = {
       name                                   = var.hostpool_name
