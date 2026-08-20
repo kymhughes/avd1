@@ -182,10 +182,10 @@ variable "avd_users_principal_id" {
   default     = "60de146c-3d1a-46b6-839a-fd84d669b465"
 }
 
-variable "scaling_plan_sp_id" {
-  type        = string
-  description = "Object ID of the AVD service principal used for scaling plan power operations."
-}
+# variable "scaling_plan_sp_id" {
+#   type        = string
+#   description = "Object ID of the AVD service principal used for scaling plan power operations."
+# }
 
 variable "host_pools" {
   description = "Host pools and matching desktop application groups to create."
