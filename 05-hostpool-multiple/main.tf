@@ -295,7 +295,7 @@ resource "azapi_resource" "dynamic_scaling_plan" {
 
   depends_on = [
     azurerm_role_assignment.avd_reader,
-    azurerm_role_assignment.avd_power_on_off,
+    #azurerm_role_assignment.avd_power_on_off,
     azurerm_role_assignment.avd_vm_contributor,
     azurerm_role_assignment.avd_keyvault_secrets_user,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
