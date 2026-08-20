@@ -31,32 +31,34 @@ data "azurerm_key_vault" "session_host_secrets" {
 
 data "azurerm_client_config" "current" {}
 
-# data "azuread_service_principal" "avd" {
-#   client_id = "66080947-954d-4adb-933c-293d3bbb3441"
+
+
+
+# this is redundant when VM Contributor is used.
+# resource "azurerm_role_assignment" "avd_power_on_off" {
+#   scope                            = "/subscriptions/${var.spoke_subscription_id}"
+#   role_definition_name             = "Desktop Virtualization Power On Off Contributor"
+#   principal_id                     = var.avd_service_principal_object_id
+#   skip_service_principal_aad_check = true
 # }
 
+###################################################################################
 #Assign nesssesary roles to the AVD service principal for dynamic autoscale to work
+###################################################################################
 resource "azurerm_role_assignment" "avd_reader" {
   scope                            = "/subscriptions/${var.spoke_subscription_id}"
   role_definition_name             = "Reader"
   principal_id                     = var.avd_service_principal_object_id
   skip_service_principal_aad_check = true
 }
-
-resource "azurerm_role_assignment" "avd_power_on_off" {
-  scope                            = "/subscriptions/${var.spoke_subscription_id}"
-  role_definition_name             = "Desktop Virtualization Power On Off Contributor"
-  principal_id                     = var.avd_service_principal_object_id
-  skip_service_principal_aad_check = true
-}
-
+# VM Contributor role so it can start/stop/create/delete VMs for dynamic autoscale
 resource "azurerm_role_assignment" "avd_vm_contributor" {
   scope                            = "/subscriptions/${var.spoke_subscription_id}"
   role_definition_name             = "Desktop Virtualization Virtual Machine Contributor"
   principal_id                     = var.avd_service_principal_object_id
   skip_service_principal_aad_check = true
 }
-
+# Secrets access
 resource "azurerm_role_assignment" "avd_keyvault_secrets_user" {
   scope                            = data.azurerm_key_vault.session_host_secrets.id
   role_definition_name             = "Key Vault Secrets User"
@@ -64,6 +66,12 @@ resource "azurerm_role_assignment" "avd_keyvault_secrets_user" {
   skip_service_principal_aad_check = true
 }
 
+
+###################################################################################
+#Assign nesssesary roles for each Session Pool Managed ID for dynamic autoscale to work
+###################################################################################
+
+# resource group VM Contributor
 resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
   for_each = local.host_pools
 
@@ -71,7 +79,15 @@ resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
   role_definition_name = "Desktop Virtualization Virtual Machine Contributor"
   principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
 }
+#Reader
+resource "azurerm_role_assignment" "host_pool_mi_subscription_reader" {
+  for_each = local.host_pools
 
+  scope                = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name = "Reader"
+  principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
+}
+#Assign Key Vault Secrets User role to the host pool managed identity so it can read secrets from the Key Vault
 resource "azurerm_role_assignment" "host_pool_mi_keyvault_secrets_user" {
   for_each = local.host_pools
 
@@ -79,8 +95,6 @@ resource "azurerm_role_assignment" "host_pool_mi_keyvault_secrets_user" {
   role_definition_name = "Key Vault Secrets User"
   principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
 }
-
-
 
 
 

@@ -105,6 +105,13 @@ resource "azurerm_key_vault_secret" "vm_local_admin_username" {
   content_type = "AVD session host local administrator username"
   tags         = var.tags
 
+  lifecycle {
+    ignore_changes = [
+      value,
+      tags
+    ]
+  }
+
   depends_on = [
     time_sleep.wait_for_keyvault_private_endpoint
   ]
@@ -118,6 +125,13 @@ resource "azurerm_key_vault_secret" "vm_local_admin_password" {
   key_vault_id = module.avm_res_keyvault_vault.resource_id
   content_type = "AVD session host local administrator password"
   tags         = var.tags
+
+  lifecycle {
+    ignore_changes = [
+      value,
+      tags
+    ]
+  }
 
   depends_on = [
     time_sleep.wait_for_keyvault_private_endpoint
