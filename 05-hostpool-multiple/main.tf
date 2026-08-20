@@ -67,6 +67,13 @@ resource "azurerm_role_assignment" "avd_vm_contributor" {
   skip_service_principal_aad_check = true
 }
 
+#Network Contributor role so it can startattach nics to subnet
+resource "azurerm_role_assignment" "avd_network_contributor" {
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Network Contributor"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
+}
 # Secrets access
 resource "azurerm_role_assignment" "avd_keyvault_secrets_user" {
   scope                            = data.azurerm_key_vault.session_host_secrets.id
@@ -209,6 +216,7 @@ resource "azapi_resource" "session_host_configuration" {
     azurerm_role_assignment.avd_keyvault_secrets_user,
     azurerm_role_assignment.host_pool_mi_network_contributor,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
+    azurerm_role_assignment.avd_network_contributor,    
     azurerm_role_assignment.host_pool_mi_subscription_reader,
     azurerm_role_assignment.host_pool_mi_keyvault_secrets_user
   ]
@@ -319,6 +327,7 @@ resource "azapi_resource" "dynamic_scaling_plan" {
     azurerm_role_assignment.avd_keyvault_secrets_user,
     azurerm_role_assignment.host_pool_mi_network_contributor,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
+    azurerm_role_assignment.avd_network_contributor,    
     azurerm_role_assignment.host_pool_mi_subscription_reader,
     azurerm_role_assignment.host_pool_mi_keyvault_secrets_user
   ]
