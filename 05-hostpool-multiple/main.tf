@@ -26,6 +26,29 @@ data "azurerm_virtual_desktop_workspace" "this" {
 
 data "azurerm_client_config" "current" {}
 
+data "azuread_service_principal" "avd" {
+  client_id = "d4723dbb-543b-49e1-adfa-2a112c7bfe75"
+}
+
+#Assign nesssesary roles to the AVD service principal for dynamic autoscale to work
+resource "azurerm_role_assignment" "avd_reader" {
+  scope                = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name = "Reader"
+  principal_id         = data.azuread_service_principal.avd.object_id
+}
+
+resource "azurerm_role_assignment" "avd_power_on_off" {
+  scope                = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name = "Desktop Virtualization Power On Off Contributor"
+  principal_id         = data.azuread_service_principal.avd.object_id
+}
+
+resource "azurerm_role_assignment" "avd_vm_contributor" {
+  scope                = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name = "Desktop Virtualization Virtual Machine Contributor"
+  principal_id         = data.azuread_service_principal.avd.object_id
+}
+
 
 locals {
   host_pools = length(var.host_pools) > 0 ? {
@@ -146,9 +169,10 @@ resource "azurerm_virtual_desktop_workspace_application_group_association" "this
 # Dynamic autoscale needs subscription-level permissions so the AVD service can
 # create, delete, start, stop, and update session hosts.
 resource "azurerm_role_assignment" "scaling_plan_sp" {
-  scope                            = "/subscriptions/${var.spoke_subscription_id}"
-  role_definition_name             = "Desktop Virtualization Power On Off Contributor"
-  principal_id                     = var.scaling_plan_sp_id
+  scope                = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name = "Desktop Virtualization Power On Off Contributor"
+  #principal_id                     = var.scaling_plan_sp_id
+  principal_id                     = data.azuread_service_principal.avd.object_id
   skip_service_principal_aad_check = true
 }
 
