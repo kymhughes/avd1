@@ -24,6 +24,11 @@ data "azurerm_virtual_desktop_workspace" "this" {
   resource_group_name = coalesce(var.workspace_resource_group_name, var.rg_so)
 }
 
+data "azurerm_key_vault" "session_host_secrets" {
+  name                = var.key_vault_name
+  resource_group_name = var.rg_so
+}
+
 data "azurerm_client_config" "current" {}
 
 # data "azuread_service_principal" "avd" {
@@ -61,6 +66,13 @@ resource "azurerm_role_assignment" "scaling_plan_sp" {
 resource "azurerm_role_assignment" "scaling_plan_vm_contributor" {
   scope                            = "/subscriptions/${var.spoke_subscription_id}"
   role_definition_name             = "Desktop Virtualization Virtual Machine Contributor"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "avd_keyvault_secrets_user" {
+  scope                            = data.azurerm_key_vault.session_host_secrets.id
+  role_definition_name             = "Key Vault Secrets User"
   principal_id                     = var.avd_service_principal_object_id
   skip_service_principal_aad_check = true
 }
@@ -163,6 +175,10 @@ resource "azapi_resource" "session_host_configuration" {
   body = {
     properties = coalesce(each.value.session_host_configuration, var.host_pool_vm_template)
   }
+
+  depends_on = [
+    azurerm_role_assignment.avd_keyvault_secrets_user
+  ]
 }
 
 # ── Application Groups ────────────────────────────────────────────────────────

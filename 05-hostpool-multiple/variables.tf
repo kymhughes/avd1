@@ -193,6 +193,11 @@ variable "avd_service_principal_object_id" {
   default     = null
 }
 
+variable "key_vault_name" {
+  type        = string
+  description = "Name of the Key Vault containing session host admin secrets."
+}
+
 variable "host_pools" {
   description = "Host pools and matching desktop application groups to create."
   type = list(object({
