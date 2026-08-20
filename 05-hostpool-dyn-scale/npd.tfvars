@@ -32,7 +32,8 @@ host_pools = [
           publisher    = "MicrosoftWindowsDesktop"
           offer        = "windows-11"
           sku          = "win11-25h2-avd"
-          exactVersion = "latest"
+          #exactVersion = "latest"
+          exactVersion = "26200.9168.260809"          
         }
       }
 
@@ -128,3 +129,4 @@ dynamic_scaling_plan_schedules = [
     rampDownStopHostsWhen       = "ZeroActiveSessions"
   }
 ]
+
