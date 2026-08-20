@@ -1,7 +1,5 @@
 # ── FSLogix Storage — Premium FileStorage, AADKERB, Private Endpoint ──────────
 # Depends on: 01-resource-groups (rg_storage_name), 02-network (pesubnet_id, vnet_id)
-# Provides:   storage_account_id, storage_account_name, fslogix_share_name
-#             → consumed by 08-rbac
 #
 # Security posture:
 #   - shared_access_key_enabled       = false  (Entra-only auth)
@@ -12,137 +10,113 @@ data "azurerm_client_config" "current" {
   provider = azurerm.spoke
 }
 
-resource "random_string" "suffix" {
-  length  = 4
-  special = false
-  upper   = false
-}
-
-locals {
-  storage_name = lower(replace("stavd${var.prefix}${random_string.suffix.id}", "-", ""))
-  tags = {
-    environment     = var.environment
-    ServiceWorkload = "Azure Virtual Desktop"
-    ManagedBy       = "Terraform"
-  }
+data "azuread_group" "avd_users" {
+  display_name     = var.avd_users_group
+  security_enabled = true
 }
 
 # ── User-Assigned Managed Identity ───────────────────────────────────────────
 resource "azurerm_user_assigned_identity" "storage_mi" {
   provider            = azurerm.spoke
-  name                = "mi-avd-storage-${var.prefix}-${var.environment}"
+  name                = var.storage_managed_identity_name
   resource_group_name = var.rg_storage_name
   location            = var.avdLocation
-  tags                = local.tags
+  tags                = var.tags
 }
 
 # ── FSLogix Storage Account ───────────────────────────────────────────────────
-resource "azurerm_storage_account" "fslogix" {
-  provider                      = azurerm.spoke
-  name                          = local.storage_name
-  resource_group_name           = var.rg_storage_name
-  location                      = var.avdLocation
-  account_tier                  = "Premium"
-  account_kind                  = "FileStorage"
-  account_replication_type      = "LRS"
-  shared_access_key_enabled     = false
-  public_network_access_enabled = false
-  min_tls_version               = "TLS1_2"
-  tags                          = local.tags
-
-  azure_files_authentication {
-    directory_type = "AADKERB"
-  }
+resource "azapi_resource" "fslogix" {
+  type      = "Microsoft.Storage/storageAccounts@2023-05-01"
+  name      = var.storage_account_name
+  parent_id = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_storage_name}"
+  location  = var.avdLocation
+  tags      = var.tags
 
   identity {
     type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.storage_mi.id]
   }
 
+  body = {
+    kind = "FileStorage"
+    sku = {
+      name = "Premium_LRS"
+    }
+    properties = {
+      allowSharedKeyAccess     = false
+      publicNetworkAccess      = "Disabled"
+      minimumTlsVersion        = "TLS1_2"
+      supportsHttpsTrafficOnly = true
+
+      azureFilesIdentityBasedAuthentication = {
+        directoryServiceOptions = "AADKERB"
+      }
+    }
+  }
+
   lifecycle {
-    prevent_destroy = true
-    ignore_changes  = [azure_files_authentication]
+    prevent_destroy = false
   }
 }
 
 # ── FSLogix File Share ────────────────────────────────────────────────────────
 resource "azurerm_storage_share" "fslogix" {
   provider           = azurerm.spoke
-  name               = "fslogix"
-  storage_account_id = azurerm_storage_account.fslogix.id
+  name               = var.fslogix_share_name
+  storage_account_id = azapi_resource.fslogix.id
   quota              = var.fslogix_share_quota_gb
   enabled_protocol   = "SMB"
 }
 
 # ── Private DNS Zone for Files (pre-existing in hub) ─────────────────────
-# DNS zones are managed centrally by the platform/hub team — reference only.
-# Prerequisite: "privatelink.file.core.windows.net" zone must already exist in
-# var.hub_dns_zone_rg before running this module.
-# If previously managed by this module, remove from state first:
-#   terraform state rm azurerm_private_dns_zone.file_dns
 data "azurerm_private_dns_zone" "file_dns" {
   provider            = azurerm.hub
   name                = "privatelink.file.core.windows.net"
   resource_group_name = var.hub_dns_zone_rg
 }
 
-# VNet link — connects spoke VNet to the hub DNS zone so DNS queries resolve privately.
-# Created once per spoke VNet; prevent_destroy ensures it is never accidentally removed.
-resource "azurerm_private_dns_zone_virtual_network_link" "file_dns_link" {
-  provider              = azurerm.hub
-  name                  = "link-files-${var.prefix}"
-  resource_group_name   = var.hub_dns_zone_rg
-  private_dns_zone_name = data.azurerm_private_dns_zone.file_dns.name
-  virtual_network_id    = var.spoke_vnet_id
-  registration_enabled  = false
-  tags                  = local.tags
-  lifecycle { prevent_destroy = true }
-}
 
 # ── Private Endpoint ──────────────────────────────────────────────────────────
 resource "azurerm_private_endpoint" "file_pe" {
   provider            = azurerm.spoke
-  name                = "pe-avd-files-${var.prefix}"
+  name                = var.file_private_endpoint_name
   resource_group_name = var.rg_storage_name
   location            = var.avdLocation
-  subnet_id           = var.pesubnet_id
-  tags                = local.tags
+  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_files}"
+  tags                = var.tags
 
   private_service_connection {
-    name                           = "psc-files-${var.prefix}"
-    private_connection_resource_id = azurerm_storage_account.fslogix.id
+    name                           = var.file_private_service_connection_name
+    private_connection_resource_id = azapi_resource.fslogix.id
     is_manual_connection           = false
     subresource_names              = ["file"]
   }
 
   private_dns_zone_group {
-    name                 = "dns-file-${var.prefix}"
+    name                 = var.file_private_dns_zone_group_name
     private_dns_zone_ids = [data.azurerm_private_dns_zone.file_dns.id]
   }
 
-  depends_on = [azurerm_storage_account.fslogix]
+  depends_on = [azapi_resource.fslogix]
 }
 
 # ── Network Rules — deny all except PE subnet ─────────────────────────────────
 resource "azurerm_storage_account_network_rules" "fslogix_rules" {
   provider                   = azurerm.spoke
-  storage_account_id         = azurerm_storage_account.fslogix.id
+  storage_account_id         = azapi_resource.fslogix.id
   default_action             = "Deny"
   bypass                     = ["AzureServices"]
-  virtual_network_subnet_ids = [var.pesubnet_id]
+  virtual_network_subnet_ids = ["/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_files}"]
   depends_on                 = [azurerm_private_endpoint.file_pe]
 }
 
-
 # ── Storage File Data SMB Share Contributor on FSLogix Storage ────────────────
-# Skipped automatically when storage_account_id is null/empty (module 06 not yet deployed)
 resource "azurerm_role_assignment" "fslogix_smb" {
-  count                = var.storage_account_id != null && var.storage_account_id != "" ? 1 : 0
-  scope                = var.storage_account_id
+  scope                = "${azapi_resource.fslogix.id}/fileServices/default/shares/${var.fslogix_share_name}"
   role_definition_name = "Storage File Data SMB Share Contributor"
   principal_id         = data.azuread_group.avd_users.object_id
 
-  lifecycle {
-    ignore_changes = [role_definition_id, role_definition_name]
-  }
+  depends_on = [
+    azurerm_storage_share.fslogix
+  ]
 }

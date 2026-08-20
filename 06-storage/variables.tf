@@ -46,19 +46,65 @@ variable "rg_storage_name" {
   description = "Storage RG name (from module 01: rg_storage_name)"
 }
 
-variable "pesubnet_id" {
+variable "storage_account_name" {
   type        = string
-  description = "Private endpoint subnet ID (from module 02: pesubnet_id)"
+  description = "Name of the FSLogix storage account."
 }
 
-variable "spoke_vnet_id" {
+variable "storage_managed_identity_name" {
   type        = string
-  description = "Spoke VNet ID (from module 02: vnet_id)"
+  description = "Name of the user-assigned managed identity for the storage account."
+}
+
+variable "fslogix_share_name" {
+  type        = string
+  description = "Name of the FSLogix Azure Files share."
+  default     = "fslogix"
+}
+
+variable "avd_users_group" {
+  type        = string
+  description = "Display name of the group granted SMB access to the FSLogix file share."
+}
+
+variable "rg_network" {
+  type        = string
+  description = "Network resource group name."
+}
+
+variable "vnet_name" {
+  type        = string
+  description = "Spoke virtual network name."
+}
+
+variable "pesubnet_files" {
+  type        = string
+  description = "Azure Files private endpoint subnet name."
 }
 
 variable "hub_dns_zone_rg" {
   type        = string
   description = "Hub resource group for private DNS zones"
+}
+
+variable "file_private_dns_vnet_link_name" {
+  type        = string
+  description = "Name of the private DNS zone virtual network link for Azure Files."
+}
+
+variable "file_private_endpoint_name" {
+  type        = string
+  description = "Name of the Azure Files private endpoint."
+}
+
+variable "file_private_service_connection_name" {
+  type        = string
+  description = "Name of the Azure Files private service connection."
+}
+
+variable "file_private_dns_zone_group_name" {
+  type        = string
+  description = "Name of the Azure Files private endpoint DNS zone group."
 }
 
 variable "fslogix_share_quota_gb" {
