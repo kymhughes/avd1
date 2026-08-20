@@ -182,9 +182,14 @@ variable "avd_users_principal_id" {
   default     = "60de146c-3d1a-46b6-839a-fd84d669b465"
 }
 
-variable "scaling_plan_sp_id" {
+variable "avd_service_principal_object_id" {
   type        = string
-  description = "Object ID of the AVD service principal used for scaling plan power operations."
+  description = "Tenant-specific object ID of the Azure Virtual Desktop service principal."
+}
+
+variable "key_vault_id" {
+  type        = string
+  description = "Resource ID of the Key Vault containing session host admin secrets."
 }
 
 variable "host_pools" {

@@ -26,27 +26,33 @@ data "azurerm_virtual_desktop_workspace" "this" {
 
 data "azurerm_client_config" "current" {}
 
-data "azuread_service_principal" "avd" {
-  client_id = "d4723dbb-543b-49e1-adfa-2a112c7bfe75"
-}
-
 #Assign nesssesary roles to the AVD service principal for dynamic autoscale to work
 resource "azurerm_role_assignment" "avd_reader" {
-  scope                = "/subscriptions/${var.spoke_subscription_id}"
-  role_definition_name = "Reader"
-  principal_id         = data.azuread_service_principal.avd.object_id
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Reader"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
 }
 
 resource "azurerm_role_assignment" "avd_power_on_off" {
-  scope                = "/subscriptions/${var.spoke_subscription_id}"
-  role_definition_name = "Desktop Virtualization Power On Off Contributor"
-  principal_id         = data.azuread_service_principal.avd.object_id
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Desktop Virtualization Power On Off Contributor"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
 }
 
 resource "azurerm_role_assignment" "avd_vm_contributor" {
-  scope                = "/subscriptions/${var.spoke_subscription_id}"
-  role_definition_name = "Desktop Virtualization Virtual Machine Contributor"
-  principal_id         = data.azuread_service_principal.avd.object_id
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Desktop Virtualization Virtual Machine Contributor"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "avd_keyvault_secrets_user" {
+  scope                            = var.key_vault_id
+  role_definition_name             = "Key Vault Secrets User"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
 }
 
 
@@ -135,6 +141,14 @@ resource "azapi_resource" "session_host_configuration" {
   body = {
     properties = coalesce(each.value.session_host_configuration, var.host_pool_vm_template)
   }
+
+  depends_on = [
+    azurerm_role_assignment.avd_reader,
+    azurerm_role_assignment.avd_power_on_off,
+    azurerm_role_assignment.avd_vm_contributor,
+    azurerm_role_assignment.avd_keyvault_secrets_user,
+    azurerm_role_assignment.host_pool_mi_vm_contributor
+  ]
 }
 
 # ── Application Groups ────────────────────────────────────────────────────────
@@ -163,24 +177,6 @@ resource "azurerm_virtual_desktop_workspace_application_group_association" "this
 
   workspace_id         = data.azurerm_virtual_desktop_workspace.this.id
   application_group_id = azurerm_virtual_desktop_application_group.this[each.key].id
-}
-
-
-# Dynamic autoscale needs subscription-level permissions so the AVD service can
-# create, delete, start, stop, and update session hosts.
-resource "azurerm_role_assignment" "scaling_plan_sp" {
-  scope                = "/subscriptions/${var.spoke_subscription_id}"
-  role_definition_name = "Desktop Virtualization Power On Off Contributor"
-  #principal_id                     = var.scaling_plan_sp_id
-  principal_id                     = data.azuread_service_principal.avd.object_id
-  skip_service_principal_aad_check = true
-}
-
-resource "azurerm_role_assignment" "scaling_plan_vm_contributor" {
-  scope                            = "/subscriptions/${var.spoke_subscription_id}"
-  role_definition_name             = "Desktop Virtualization Virtual Machine Contributor"
-  principal_id                     = var.scaling_plan_sp_id
-  skip_service_principal_aad_check = true
 }
 
 resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
@@ -228,8 +224,10 @@ resource "azapi_resource" "dynamic_scaling_plan" {
   }
 
   depends_on = [
-    azurerm_role_assignment.scaling_plan_sp,
-    azurerm_role_assignment.scaling_plan_vm_contributor,
+    azurerm_role_assignment.avd_reader,
+    azurerm_role_assignment.avd_power_on_off,
+    azurerm_role_assignment.avd_vm_contributor,
+    azurerm_role_assignment.avd_keyvault_secrets_user,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
     azapi_resource.session_host_configuration
   ]
