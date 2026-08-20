@@ -29,6 +29,13 @@ data "azurerm_key_vault" "session_host_secrets" {
   resource_group_name = var.rg_so
 }
 
+data "azurerm_private_dns_zone" "avd_feed_dns" {
+  provider = azurerm.hub
+
+  name                = "privatelink.wvd.microsoft.com"
+  resource_group_name = var.hub_dns_zone_rg
+}
+
 data "azurerm_client_config" "current" {}
 
 
@@ -280,6 +287,54 @@ resource "azurerm_virtual_desktop_workspace_application_group_association" "this
 
   workspace_id         = data.azurerm_virtual_desktop_workspace.this.id
   application_group_id = azurerm_virtual_desktop_application_group.this[each.key].id
+}
+
+resource "azurerm_private_endpoint" "workspace_feed" {
+  for_each = var.enable_private_endpoints ? { workspace = true } : {}
+
+  name                = "pe-avd-ws-feed-${var.environment}"
+  resource_group_name = data.azurerm_resource_group.service_objects.name
+  location            = var.avdLocation
+  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.workspace_private_endpoint_subnet_name}"
+  tags                = var.tags
+
+  private_service_connection {
+    name                           = "psc-avd-ws-feed-${var.environment}"
+    private_connection_resource_id = data.azurerm_virtual_desktop_workspace.this.id
+    is_manual_connection           = false
+    subresource_names              = ["feed"]
+  }
+
+  private_dns_zone_group {
+    name                 = "dns-avd-ws-feed-${var.environment}"
+    private_dns_zone_ids = [data.azurerm_private_dns_zone.avd_feed_dns.id]
+  }
+}
+
+resource "azurerm_private_endpoint" "hostpool_connection" {
+  for_each = var.enable_private_endpoints ? local.host_pools : {}
+
+  name                = "pe-avd-hp-${each.value.name}"
+  resource_group_name = azurerm_resource_group.compute[each.key].name
+  location            = var.avdLocation
+  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.hostpool_private_endpoint_subnet_name}"
+  tags                = var.tags
+
+  private_service_connection {
+    name                           = "psc-avd-hp-${each.value.name}"
+    private_connection_resource_id = azapi_resource.host_pool[each.key].id
+    is_manual_connection           = false
+    subresource_names              = ["connection"]
+  }
+
+  private_dns_zone_group {
+    name                 = "dns-avd-hp-${each.value.name}"
+    private_dns_zone_ids = [data.azurerm_private_dns_zone.avd_feed_dns.id]
+  }
+
+  depends_on = [
+    azapi_resource.host_pool
+  ]
 }
 
 

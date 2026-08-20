@@ -198,6 +198,32 @@ variable "key_vault_name" {
   description = "Name of the Key Vault containing session host admin secrets."
 }
 
+variable "enable_private_endpoints" {
+  type        = bool
+  description = "Create private endpoints for the AVD workspace feed and host pool connection."
+  default     = true
+}
+
+variable "rg_network" {
+  type        = string
+  description = "Resource group containing the spoke virtual network."
+}
+
+variable "vnet_name" {
+  type        = string
+  description = "Spoke virtual network name."
+}
+
+variable "workspace_private_endpoint_subnet_name" {
+  type        = string
+  description = "Subnet name for the AVD workspace feed private endpoint."
+}
+
+variable "hostpool_private_endpoint_subnet_name" {
+  type        = string
+  description = "Subnet name for AVD host pool connection private endpoints."
+}
+
 variable "host_pools" {
   description = "Host pools and matching desktop application groups to create."
   type = list(object({

@@ -5,9 +5,13 @@ hostpool_start_vm_on_connect   = true
 hostpool_validate_environment  = true
 hostpool_custom_rdp_properties = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
 #scaling_plan_sp_id = "66080947-954d-4adb-933c-293d3bbb3441"    Removed hard coded value. looked up from static client id of d4723dbb-543b-49e1-adfa-2a112c7bfe75
-avd_service_principal_object_id = "1b114a9c-431d-4b21-b525-631a2a31027a"
-key_vault_name                  = "kv-avd-itm-npd"
-workspace_name                  = "workspace-npd"
+avd_service_principal_object_id        = "1b114a9c-431d-4b21-b525-631a2a31027a"
+key_vault_name                         = "kv-avd-itm-npd"
+workspace_name                         = "workspace-npd"
+rg_network                             = "rg-itm-network-npd"
+vnet_name                              = "vnet-itm-vnet-npd"
+workspace_private_endpoint_subnet_name = "snet-general-pe"
+hostpool_private_endpoint_subnet_name  = "snet-general-pe"
 
 host_pools = [
   {
