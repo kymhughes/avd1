@@ -132,3 +132,17 @@ resource "azurerm_storage_account_network_rules" "fslogix_rules" {
   virtual_network_subnet_ids = [var.pesubnet_id]
   depends_on                 = [azurerm_private_endpoint.file_pe]
 }
+
+
+# ── Storage File Data SMB Share Contributor on FSLogix Storage ────────────────
+# Skipped automatically when storage_account_id is null/empty (module 06 not yet deployed)
+resource "azurerm_role_assignment" "fslogix_smb" {
+  count                = var.storage_account_id != null && var.storage_account_id != "" ? 1 : 0
+  scope                = var.storage_account_id
+  role_definition_name = "Storage File Data SMB Share Contributor"
+  principal_id         = data.azuread_group.avd_users.object_id
+
+  lifecycle {
+    ignore_changes = [role_definition_id, role_definition_name]
+  }
+}
