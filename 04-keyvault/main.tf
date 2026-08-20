@@ -46,10 +46,11 @@ module "avm_res_keyvault_vault" {
   #soft_delete_retention_days    = 90
 
   network_acls = {
-    bypass         = "None"
+    #bypass         = "None"
+    bypass         = "AzureServices"
     default_action = "Deny"
   }
-
+  
   private_endpoints = {
     vault = {
       name                            = var.keyvault_pe_name
@@ -123,24 +124,3 @@ resource "azurerm_key_vault_secret" "vm_local_admin_password" {
   ]
 }
 
-
-# # ── VM Local Admin Password Secret ───────────────────────────────────────────
-# resource "azurerm_key_vault_secret" "localpassword" {
-#   provider     = azurerm.spoke
-#   name         = "avd-local-admin-password"
-#   value        = random_password.vmpass.result
-#   key_vault_id = module.avm_res_keyvault_vault.keyvault_id
-#   content_type = "AVD Local Admin Password"
-#   #tags         = var.tags
-#   lifecycle { ignore_changes = [tags] }
-#   depends_on = [module.avm_res_keyvault_vault]
-# }
-
-# resource "random_password" "vmpass" {
-#   length      = 20
-#   special     = true
-#   min_lower   = 2
-#   min_upper   = 2
-#   min_numeric = 2
-#   min_special = 2
-# }
