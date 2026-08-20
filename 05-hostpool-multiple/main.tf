@@ -52,12 +52,21 @@ resource "azurerm_role_assignment" "avd_reader" {
   skip_service_principal_aad_check = true
 }
 # VM Contributor role so it can start/stop/create/delete VMs for dynamic autoscale
+resource "azurerm_role_assignment" "avd_vm_on_off_contributor" {
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Desktop Virtualization Power On Off Contributor"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
+}
+
+# VM Contributor role so it can start/stop/create/delete VMs for dynamic autoscale
 resource "azurerm_role_assignment" "avd_vm_contributor" {
   scope                            = "/subscriptions/${var.spoke_subscription_id}"
   role_definition_name             = "Desktop Virtualization Virtual Machine Contributor"
   principal_id                     = var.avd_service_principal_object_id
   skip_service_principal_aad_check = true
 }
+
 # Secrets access
 resource "azurerm_role_assignment" "avd_keyvault_secrets_user" {
   scope                            = data.azurerm_key_vault.session_host_secrets.id
@@ -77,6 +86,14 @@ resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
 
   scope                = azurerm_resource_group.compute[each.key].id
   role_definition_name = "Desktop Virtualization Virtual Machine Contributor"
+  principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
+}
+# resource group Network Contributor
+resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
+  for_each = local.host_pools
+
+  scope                = azurerm_resource_group.compute[each.key].id
+  role_definition_name = "Network Contributor"
   principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
 }
 #Reader
@@ -187,6 +204,7 @@ resource "azapi_resource" "session_host_configuration" {
 
   depends_on = [
     azurerm_role_assignment.avd_reader,
+    azurerm_role_assignment.avd_vm_on_off_contributor,
     azurerm_role_assignment.avd_vm_contributor,
     azurerm_role_assignment.avd_keyvault_secrets_user,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
@@ -295,6 +313,7 @@ resource "azapi_resource" "dynamic_scaling_plan" {
 
   depends_on = [
     azurerm_role_assignment.avd_reader,
+    azurerm_role_assignment.avd_vm_on_off_contributor,
     azurerm_role_assignment.avd_vm_contributor,
     azurerm_role_assignment.avd_keyvault_secrets_user,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
