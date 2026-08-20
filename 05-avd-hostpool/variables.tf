@@ -55,7 +55,7 @@ variable "rg_so" {
 
 variable "rg_pool" {
   type        = string
-  description = "Host pool compute resource group name."
+  description = "Fallback host pool compute resource group name."
 }
 
 variable "user_group_name" {
@@ -185,6 +185,8 @@ variable "host_pools" {
   description = "Host pools and matching desktop application groups to create."
   type = list(object({
     name                                   = string
+    resource_group_name                    = optional(string)
+    avd_users_principal_id                 = optional(string)
     app_group_name                         = string
     app_group_default_desktop_display_name = optional(string)
     app_group_type                         = optional(string)

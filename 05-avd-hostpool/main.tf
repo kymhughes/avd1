@@ -24,13 +24,6 @@ data "azurerm_virtual_desktop_workspace" "this" {
   resource_group_name = coalesce(var.workspace_resource_group_name, var.rg_so)
 }
 
-resource "azurerm_resource_group" "compute" {
-  location = var.avdLocation
-  name     = var.rg_pool
-  tags     = var.tags
-  lifecycle { prevent_destroy = false }
-}
-
 data "azurerm_client_config" "current" {}
 
 
@@ -40,6 +33,7 @@ locals {
     } : var.hostpool_name == null || var.app_group_name == null ? {} : {
     (var.hostpool_name) = {
       name                                   = var.hostpool_name
+      resource_group_name                    = var.rg_pool
       app_group_name                         = var.app_group_name
       app_group_default_desktop_display_name = var.app_group_default_desktop_display_name
       app_group_type                         = var.app_group_type
@@ -58,13 +52,22 @@ locals {
   }
 }
 
+resource "azurerm_resource_group" "compute" {
+  for_each = local.host_pools
+
+  location = var.avdLocation
+  name     = coalesce(each.value.resource_group_name, "rg-${each.value.name}-${var.environment}")
+  tags     = var.tags
+  lifecycle { prevent_destroy = false }
+}
+
 # # ── Host Pool (AzureRM) ───────────────
 resource "azurerm_virtual_desktop_host_pool" "this" {
   for_each = local.host_pools
 
   name                = each.value.name
   location            = var.avdLocation
-  resource_group_name = azurerm_resource_group.compute.name
+  resource_group_name = azurerm_resource_group.compute[each.key].name
 
   public_network_access    = "Disabled"
   type                     = coalesce(each.value.hostpool_type, var.hostpool_type)
@@ -115,7 +118,7 @@ resource "azurerm_virtual_desktop_application_group" "this" {
 
   name                         = each.value.app_group_name
   location                     = var.avdLocation
-  resource_group_name          = azurerm_resource_group.compute.name
+  resource_group_name          = azurerm_resource_group.compute[each.key].name
   type                         = coalesce(each.value.app_group_type, var.app_group_type)
   host_pool_id                 = azurerm_virtual_desktop_host_pool.this[each.key].id
   default_desktop_display_name = coalesce(each.value.app_group_default_desktop_display_name, var.app_group_default_desktop_display_name)
@@ -127,7 +130,7 @@ resource "azurerm_role_assignment" "avd_users" {
 
   scope                = azurerm_virtual_desktop_application_group.this[each.key].id
   role_definition_name = "Desktop Virtualization User"
-  principal_id         = var.avd_users_principal_id
+  principal_id         = coalesce(each.value.avd_users_principal_id, var.avd_users_principal_id)
 }
 
 resource "azurerm_virtual_desktop_workspace_application_group_association" "this" {
@@ -160,7 +163,7 @@ resource "azapi_resource" "dynamic_scaling_plan" {
   type      = "Microsoft.DesktopVirtualization/scalingPlans@2026-04-01-preview"
   name      = coalesce(each.value.scaling_plan_name, var.scaling_plan_name, "sp-${each.value.name}")
   location  = var.avdLocation
-  parent_id = azurerm_resource_group.compute.id
+  parent_id = azurerm_resource_group.compute[each.key].id
   tags      = var.tags
 
   body = {

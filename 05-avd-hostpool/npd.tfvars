@@ -10,6 +10,8 @@ workspace_name                 = "workspace-npd"
 host_pools = [
   {
     name                                   = "pool-itm001"
+    resource_group_name                    = "rg-pool-itm001-npd"
+    avd_users_principal_id                 = "60de146c-3d1a-46b6-839a-fd84d669b465"
     app_group_name                         = "app-itm001"
     app_group_default_desktop_display_name = "itm001"
     scaling_plan_name                      = "sp-itm001-npd"
