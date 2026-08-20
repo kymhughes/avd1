@@ -111,13 +111,25 @@ resource "azapi_resource" "storage_account" {
   }
 }
 
+resource "azapi_resource" "file_service" {
+  for_each = local.storage_accounts
+
+  type      = "Microsoft.Storage/storageAccounts/fileServices@2023-05-01"
+  name      = "default"
+  parent_id = azapi_resource.storage_account[each.key].id
+
+  body = {
+    properties = {}
+  }
+}
+
 # ── Azure Files Shares ────────────────────────────────────────────────────────
 resource "azapi_resource" "shares" {
   for_each = local.shares
 
   type      = "Microsoft.Storage/storageAccounts/fileServices/shares@2023-05-01"
-  name      = "default/${each.value.name}"
-  parent_id = azapi_resource.storage_account[each.value.storage_key].id
+  name      = each.value.name
+  parent_id = azapi_resource.file_service[each.value.storage_key].id
 
   body = {
     properties = {
@@ -165,12 +177,11 @@ resource "azurerm_private_endpoint" "file_pe" {
 resource "azurerm_storage_account_network_rules" "fslogix_rules" {
   for_each = local.storage_accounts
 
-  provider                   = azurerm.spoke
-  storage_account_id         = azapi_resource.storage_account[each.key].id
-  default_action             = "Deny"
-  bypass                     = ["AzureServices"]
-  virtual_network_subnet_ids = ["/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_files}"]
-  depends_on                 = [azurerm_private_endpoint.file_pe]
+  provider           = azurerm.spoke
+  storage_account_id = azapi_resource.storage_account[each.key].id
+  default_action     = "Deny"
+  bypass             = ["AzureServices"]
+  depends_on         = [azurerm_private_endpoint.file_pe]
 }
 
 # ── Storage File Data SMB Share Contributor on FSLogix Storage ────────────────
