@@ -273,6 +273,14 @@ resource "azurerm_role_assignment" "avd_users" {
   principal_id         = data.azuread_group.avd_users[each.key].object_id
 }
 
+resource "azurerm_role_assignment" "avd_users_vm_login" {
+  for_each = local.host_pools
+
+  scope                = azurerm_resource_group.compute[each.key].id
+  role_definition_name = "Virtual Machine User Login"
+  principal_id         = data.azuread_group.avd_users[each.key].object_id
+}
+
 resource "azurerm_virtual_desktop_workspace_application_group_association" "this" {
   for_each = local.host_pools
 
