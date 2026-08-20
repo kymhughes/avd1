@@ -52,6 +52,24 @@ variable "keyvault_name" {
   description = "Key Vault name."
 }
 
+variable "vm_local_admin_username" {
+  type        = string
+  description = "Local administrator username for AVD session hosts."
+  default     = "localadmin"
+}
+
+variable "vm_local_admin_username_secret_name" {
+  type        = string
+  description = "Key Vault secret name for the AVD session host local administrator username."
+  default     = "vm-local-admin-username"
+}
+
+variable "vm_local_admin_password_secret_name" {
+  type        = string
+  description = "Key Vault secret name for the AVD session host local administrator password."
+  default     = "local-password"
+}
+
 variable "hub_dns_zone_rg" {
   type        = string
   description = "Hub resource group containing private DNS zones."

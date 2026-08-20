@@ -68,16 +68,6 @@ module "avm_res_keyvault_vault" {
     }
   }
 
-  # secrets = {
-  #   local_password = {
-  #     name = "vm-local-admin-password"
-  #   }
-  # }
-
-  secrets_value = {
-    local_password = random_password.local.result
-  }
-
   # NOTE: CMK key creation requires data-plane access to the Key Vault.
   # Azure Policy in this environment enforces publicNetworkAccess=Disabled, so
   # the key must be created from within the spoke VNet (e.g. a self-hosted runner
@@ -94,6 +84,30 @@ module "avm_res_keyvault_vault" {
   # wait_for_rbac_before_key_operations = {
   #   create = "10s"
   # }
+}
+
+resource "azurerm_key_vault_secret" "vm_local_admin_username" {
+  provider = azurerm.spoke
+
+  name         = var.vm_local_admin_username_secret_name
+  value        = var.vm_local_admin_username
+  key_vault_id = module.avm_res_keyvault_vault.resource_id
+  content_type = "AVD session host local administrator username"
+  tags         = var.tags
+
+  depends_on = [module.avm_res_keyvault_vault]
+}
+
+resource "azurerm_key_vault_secret" "vm_local_admin_password" {
+  provider = azurerm.spoke
+
+  name         = var.vm_local_admin_password_secret_name
+  value        = random_password.local.result
+  key_vault_id = module.avm_res_keyvault_vault.resource_id
+  content_type = "AVD session host local administrator password"
+  tags         = var.tags
+
+  depends_on = [module.avm_res_keyvault_vault]
 }
 
 

@@ -17,29 +17,61 @@ host_pools = [
     scaling_plan_name                      = "sp-itm001-npd"
     scaling_plan_friendly_name             = "ITM001 NPD Dynamic Autoscale"
     scaling_plan_description               = "Default dynamic autoscale plan for ITM001 NPD."
-    vm_template                            = <<EOT
-{
-  "domain": "",
-  "galleryImageOffer": "windows-11",
-  "galleryImagePublisher": "MicrosoftWindowsDesktop",
-  "galleryImageSKU": "win11-24h2-avd",
-  "imageType": "Gallery",
-  "customImageId": null,
-  "namePrefix": "itm001",
-  "osDiskType": "Premium_LRS",
-  "vmSize": {
-    "id": "Standard_D2s_v5"
-  },
-  "galleryItemId": "MicrosoftWindowsDesktop.windows-11win11-24h2-avd",
-  "hibernate": false,
-  "diskSizeGB": 128,
-  "securityType": "TrustedLaunch",
-  "secureBoot": true,
-  "vTPM": true,
-  "subnetId": "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd23faad9e/resourceGroups/rg-itm-network-npd/providers/Microsoft.Network/virtualNetworks/vnet-itm-vnet-npd/subnets/snet-itm-001",
-  "vmInfrastructureType": "Cloud"
-}
-EOT
+    session_host_configuration = {
+      friendlyName    = "ITM001 NPD session hosts"
+      vmLocation      = "australiaeast"
+      vmNamePrefix    = "itm001"
+      vmResourceGroup = "rg-pool-itm001-npd"
+      vmSizeId        = "Standard_D2s_v5"
+
+      imageInfo = {
+        type = "Marketplace"
+        marketplaceInfo = {
+          publisher    = "MicrosoftWindowsDesktop"
+          offer        = "windows-11"
+          sku          = "win11-24h2-avd"
+          exactVersion = "latest"
+        }
+      }
+
+      diskInfo = {
+        managedDisk = {
+          type = "Premium_LRS"
+        }
+      }
+
+      domainInfo = {
+        joinType = "AzureActiveDirectory"
+        azureActiveDirectoryInfo = {
+          mdmProviderGuid = "0000000a-0000-0000-c000-000000000000"
+        }
+      }
+
+      networkInfo = {
+        subnetId = "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd23faad9e/resourceGroups/rg-itm-network-npd/providers/Microsoft.Network/virtualNetworks/vnet-itm-vnet-npd/subnets/snet-itm-001"
+      }
+
+      securityInfo = {
+        type              = "TrustedLaunch"
+        secureBootEnabled = true
+        vTpmEnabled       = true
+      }
+
+      bootDiagnosticsInfo = {
+        enabled = true
+      }
+
+      vmAdminCredentials = {
+        usernameKeyVaultSecretUri = "https://kv-avd-itm-npd.vault.azure.net/secrets/vm-local-admin-username"
+        passwordKeyVaultSecretUri = "https://kv-avd-itm-npd.vault.azure.net/secrets/local-password"
+      }
+
+      vmTags = {
+        environment = "npd"
+        workload    = "avd"
+        managedBy   = "terraform"
+      }
+    }
   }
 ]
 

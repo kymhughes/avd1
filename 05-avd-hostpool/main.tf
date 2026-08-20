@@ -43,7 +43,7 @@ locals {
       hostpool_start_vm_on_connect           = var.hostpool_start_vm_on_connect
       hostpool_validate_environment          = var.hostpool_validate_environment
       hostpool_custom_rdp_properties         = var.hostpool_custom_rdp_properties
-      vm_template                            = var.host_pool_vm_template
+      session_host_configuration             = var.host_pool_vm_template
       create_registration_token              = var.create_registration_token
       registration_token_ttl                 = var.registration_token_ttl
       scaling_plan_name                      = var.scaling_plan_name
@@ -86,7 +86,6 @@ resource "azapi_resource" "host_pool" {
       publicNetworkAccess   = "Disabled"
       preferredAppGroupType = coalesce(each.value.app_group_type, var.app_group_type) == "Desktop" ? "Desktop" : "RailApplications"
       managementType        = "Automated"
-      vmTemplate            = coalesce(each.value.vm_template, var.host_pool_vm_template)
 
       agentUpdate = var.scheduled_agent_updates == null ? null : {
         type                      = var.scheduled_agent_updates.enabled ? "Scheduled" : "Default"
@@ -100,6 +99,18 @@ resource "azapi_resource" "host_pool" {
         ]
       }
     }
+  }
+}
+
+resource "azapi_resource" "session_host_configuration" {
+  for_each = local.host_pools
+
+  type      = "Microsoft.DesktopVirtualization/hostPools/sessionHostConfigurations@2026-04-01-preview"
+  name      = "default"
+  parent_id = azapi_resource.host_pool[each.key].id
+
+  body = {
+    properties = coalesce(each.value.session_host_configuration, var.host_pool_vm_template)
   }
 }
 
@@ -195,7 +206,8 @@ resource "azapi_resource" "dynamic_scaling_plan" {
   depends_on = [
     azurerm_role_assignment.scaling_plan_sp,
     azurerm_role_assignment.scaling_plan_vm_contributor,
-    azurerm_role_assignment.host_pool_mi_vm_contributor
+    azurerm_role_assignment.host_pool_mi_vm_contributor,
+    azapi_resource.session_host_configuration
   ]
 }
 

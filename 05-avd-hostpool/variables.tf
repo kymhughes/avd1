@@ -106,8 +106,8 @@ variable "hostpool_custom_rdp_properties" {
 }
 
 variable "host_pool_vm_template" {
-  type        = string
-  description = "Default VM template JSON string for automated/session-host-configuration host pools."
+  type        = any
+  description = "Default session host configuration for automated host pools."
   default     = null
 }
 
@@ -202,7 +202,7 @@ variable "host_pools" {
     hostpool_start_vm_on_connect           = optional(bool)
     hostpool_validate_environment          = optional(bool)
     hostpool_custom_rdp_properties         = optional(string)
-    vm_template                            = optional(string)
+    session_host_configuration             = optional(any)
     create_registration_token              = optional(bool)
     registration_token_ttl                 = optional(string)
     scaling_plan_name                      = optional(string)
