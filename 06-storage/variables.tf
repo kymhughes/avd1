@@ -112,3 +112,24 @@ variable "fslogix_share_quota_gb" {
   default     = 100
   description = "FSLogix file share quota in GB"
 }
+
+variable "storage_accounts" {
+  description = "Storage accounts, Azure Files shares, private endpoint names, and share RBAC assignments."
+  type = map(object({
+    name                            = string
+    managed_identity_name           = string
+    kind                            = string
+    sku_name                        = string
+    identity_auth_directory_service = optional(string, "AADKERB")
+    private_endpoint_name           = string
+    private_service_connection_name = string
+    private_dns_zone_group_name     = string
+    private_dns_vnet_link_name      = optional(string)
+    shares = map(object({
+      name        = string
+      quota_gb    = number
+      rbac_groups = optional(list(string), [])
+    }))
+  }))
+  default = {}
+}

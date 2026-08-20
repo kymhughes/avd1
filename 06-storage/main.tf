@@ -6,41 +6,93 @@
 #   - public_network_access_enabled   = false  (private endpoint only)
 #   - AADKERB authentication for FSLogix Kerberos tickets
 
-data "azurerm_client_config" "current" {
-  provider = azurerm.spoke
+locals {
+  storage_accounts = length(var.storage_accounts) > 0 ? var.storage_accounts : {
+    fslogix = {
+      name                            = var.storage_account_name
+      managed_identity_name           = var.storage_managed_identity_name
+      kind                            = "FileStorage"
+      sku_name                        = "Premium_LRS"
+      identity_auth_directory_service = "AADKERB"
+      private_endpoint_name           = var.file_private_endpoint_name
+      private_service_connection_name = var.file_private_service_connection_name
+      private_dns_zone_group_name     = var.file_private_dns_zone_group_name
+      private_dns_vnet_link_name      = var.file_private_dns_vnet_link_name
+      shares = {
+        fslogix = {
+          name        = var.fslogix_share_name
+          quota_gb    = var.fslogix_share_quota_gb
+          rbac_groups = [var.avd_users_group]
+        }
+      }
+    }
+  }
+
+  shares = merge([
+    for storage_key, storage in local.storage_accounts : {
+      for share_key, share in storage.shares : "${storage_key}.${share_key}" => {
+        storage_key = storage_key
+        share_key   = share_key
+        name        = share.name
+        quota_gb    = share.quota_gb
+        rbac_groups = share.rbac_groups
+      }
+    }
+  ]...)
+
+  share_rbac_assignments = merge([
+    for share_resource_key, share in local.shares : {
+      for group_name in share.rbac_groups : "${share_resource_key}.${group_name}" => {
+        share_resource_key = share_resource_key
+        storage_key        = share.storage_key
+        share_name         = share.name
+        group_name         = group_name
+      }
+    }
+  ]...)
+
+  rbac_group_names = toset([
+    for assignment in values(local.share_rbac_assignments) : assignment.group_name
+  ])
 }
 
-data "azuread_group" "avd_users" {
-  display_name     = var.avd_users_group
+data "azuread_group" "rbac_groups" {
+  for_each = local.rbac_group_names
+
+  display_name     = each.key
   security_enabled = true
 }
 
 # ── User-Assigned Managed Identity ───────────────────────────────────────────
 resource "azurerm_user_assigned_identity" "storage_mi" {
+  for_each = local.storage_accounts
+
   provider            = azurerm.spoke
-  name                = var.storage_managed_identity_name
+  name                = each.value.managed_identity_name
   resource_group_name = var.rg_storage_name
   location            = var.avdLocation
   tags                = var.tags
 }
 
 # ── FSLogix Storage Account ───────────────────────────────────────────────────
-resource "azapi_resource" "fslogix" {
+resource "azapi_resource" "storage_account" {
+  for_each = local.storage_accounts
+
   type      = "Microsoft.Storage/storageAccounts@2023-05-01"
-  name      = var.storage_account_name
+  name      = each.value.name
   parent_id = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_storage_name}"
   location  = var.avdLocation
   tags      = var.tags
 
   identity {
     type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.storage_mi.id]
+    identity_ids = [azurerm_user_assigned_identity.storage_mi[each.key].id]
   }
 
   body = {
-    kind = "FileStorage"
+    kind = each.value.kind
     sku = {
-      name = "Premium_LRS"
+      name = each.value.sku_name
     }
     properties = {
       allowSharedKeyAccess     = false
@@ -49,7 +101,7 @@ resource "azapi_resource" "fslogix" {
       supportsHttpsTrafficOnly = true
 
       azureFilesIdentityBasedAuthentication = {
-        directoryServiceOptions = "AADKERB"
+        directoryServiceOptions = each.value.identity_auth_directory_service
       }
     }
   }
@@ -60,11 +112,13 @@ resource "azapi_resource" "fslogix" {
 }
 
 # ── FSLogix File Share ────────────────────────────────────────────────────────
-resource "azurerm_storage_share" "fslogix" {
+resource "azurerm_storage_share" "shares" {
+  for_each = local.shares
+
   provider           = azurerm.spoke
-  name               = var.fslogix_share_name
-  storage_account_id = azapi_resource.fslogix.id
-  quota              = var.fslogix_share_quota_gb
+  name               = each.value.name
+  storage_account_id = azapi_resource.storage_account[each.value.storage_key].id
+  quota              = each.value.quota_gb
   enabled_protocol   = "SMB"
 }
 
@@ -78,32 +132,36 @@ data "azurerm_private_dns_zone" "file_dns" {
 
 # ── Private Endpoint ──────────────────────────────────────────────────────────
 resource "azurerm_private_endpoint" "file_pe" {
+  for_each = local.storage_accounts
+
   provider            = azurerm.spoke
-  name                = var.file_private_endpoint_name
+  name                = each.value.private_endpoint_name
   resource_group_name = var.rg_storage_name
   location            = var.avdLocation
   subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_files}"
   tags                = var.tags
 
   private_service_connection {
-    name                           = var.file_private_service_connection_name
-    private_connection_resource_id = azapi_resource.fslogix.id
+    name                           = each.value.private_service_connection_name
+    private_connection_resource_id = azapi_resource.storage_account[each.key].id
     is_manual_connection           = false
     subresource_names              = ["file"]
   }
 
   private_dns_zone_group {
-    name                 = var.file_private_dns_zone_group_name
+    name                 = each.value.private_dns_zone_group_name
     private_dns_zone_ids = [data.azurerm_private_dns_zone.file_dns.id]
   }
 
-  depends_on = [azapi_resource.fslogix]
+  depends_on = [azapi_resource.storage_account]
 }
 
 # ── Network Rules — deny all except PE subnet ─────────────────────────────────
 resource "azurerm_storage_account_network_rules" "fslogix_rules" {
+  for_each = local.storage_accounts
+
   provider                   = azurerm.spoke
-  storage_account_id         = azapi_resource.fslogix.id
+  storage_account_id         = azapi_resource.storage_account[each.key].id
   default_action             = "Deny"
   bypass                     = ["AzureServices"]
   virtual_network_subnet_ids = ["/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_files}"]
@@ -111,12 +169,15 @@ resource "azurerm_storage_account_network_rules" "fslogix_rules" {
 }
 
 # ── Storage File Data SMB Share Contributor on FSLogix Storage ────────────────
-resource "azurerm_role_assignment" "fslogix_smb" {
-  scope                = "${azapi_resource.fslogix.id}/fileServices/default/shares/${var.fslogix_share_name}"
+resource "azurerm_role_assignment" "share_smb" {
+  for_each = local.share_rbac_assignments
+
+  provider             = azurerm.spoke
+  scope                = "${azapi_resource.storage_account[each.value.storage_key].id}/fileServices/default/shares/${each.value.share_name}"
   role_definition_name = "Storage File Data SMB Share Contributor"
-  principal_id         = data.azuread_group.avd_users.object_id
+  principal_id         = data.azuread_group.rbac_groups[each.value.group_name].object_id
 
   depends_on = [
-    azurerm_storage_share.fslogix
+    azurerm_storage_share.shares
   ]
 }

@@ -38,6 +38,8 @@ provider "azurerm" {
   features {}
 }
 
+provider "azapi" {}
+
 provider "azuread" {
   tenant_id = var.tenant_id
 }
