@@ -31,7 +31,7 @@ host_pools = [
         marketplaceInfo = {
           publisher    = "MicrosoftWindowsDesktop"
           offer        = "windows-11"
-          sku          = "win11-24h2-avd"
+          sku          = "win11-25h2-avd"
           exactVersion = "latest"
         }
       }
