@@ -192,6 +192,11 @@ variable "key_vault_id" {
   description = "Resource ID of the Key Vault containing session host admin secrets."
 }
 
+variable "network_resource_group_name" {
+  type        = string
+  description = "Resource group containing the virtual network used by dynamic session hosts."
+}
+
 variable "host_pools" {
   description = "Host pools and matching desktop application groups to create."
   type = list(object({

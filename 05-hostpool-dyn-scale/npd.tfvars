@@ -6,6 +6,7 @@ hostpool_validate_environment   = true
 hostpool_custom_rdp_properties  = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
 avd_service_principal_object_id = "1b114a9c-431d-4b21-b525-631a2a31027a"
 key_vault_id                    = "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd23faad9e/resourceGroups/rg-service-objects-npd/providers/Microsoft.KeyVault/vaults/kv-avd-itm-npd"
+network_resource_group_name     = "rg-itm-network-npd"
 workspace_name                  = "workspace-npd"
 
 host_pools = [

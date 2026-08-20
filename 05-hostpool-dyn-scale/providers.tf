@@ -9,6 +9,10 @@ terraform {
       source  = "Azure/azapi"
       version = "~> 2.0"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.14.0"
+    }
   }
   # backend "azurerm" {
   #   resource_group_name  = "rg-terraform-state"
