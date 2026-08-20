@@ -52,17 +52,16 @@ resource "azurerm_role_assignment" "avd_vm_contributor" {
 # Dynamic autoscale needs subscription-level permissions so the AVD service can
 # create, delete, start, stop, and update session hosts.
 resource "azurerm_role_assignment" "scaling_plan_sp" {
-  scope                = "/subscriptions/${var.spoke_subscription_id}"
-  role_definition_name = "Desktop Virtualization Power On Off Contributor"
-  #principal_id                     = var.scaling_plan_sp_id
-  principal_id                     = data.azuread_service_principal.avd.object_id
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Desktop Virtualization Power On Off Contributor"
+  principal_id                     = var.avd_service_principal_object_id
   skip_service_principal_aad_check = true
 }
 
 resource "azurerm_role_assignment" "scaling_plan_vm_contributor" {
   scope                            = "/subscriptions/${var.spoke_subscription_id}"
   role_definition_name             = "Desktop Virtualization Virtual Machine Contributor"
-  principal_id                     = data.azuread_service_principal.avd.object_id
+  principal_id                     = var.avd_service_principal_object_id
   skip_service_principal_aad_check = true
 }
 
