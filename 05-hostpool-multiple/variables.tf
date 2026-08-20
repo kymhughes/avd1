@@ -176,10 +176,10 @@ variable "workspace_resource_group_name" {
   default     = null
 }
 
-variable "avd_users_principal_id" {
+variable "avd_users_group" {
   type        = string
-  description = "Principal ID granted Desktop Virtualization User on each application group."
-  default     = "60de146c-3d1a-46b6-839a-fd84d669b465"
+  description = "Display name of the group granted Desktop Virtualization User on each application group."
+  default     = "avd_users_cloud"
 }
 
 # variable "scaling_plan_sp_id" {
@@ -229,7 +229,7 @@ variable "host_pools" {
   type = list(object({
     name                                   = string
     resource_group_name                    = optional(string)
-    avd_users_principal_id                 = optional(string)
+    avd_users_group                        = optional(string)
     app_group_name                         = string
     app_group_default_desktop_display_name = optional(string)
     app_group_type                         = optional(string)

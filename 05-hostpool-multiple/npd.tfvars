@@ -1,10 +1,9 @@
-rg_so                          = "rg-service-objects-npd"
-rg_pool                        = "rg-it01-pool-npd"
-user_group_name                = "avd_users_cloud"
-hostpool_start_vm_on_connect   = true
-hostpool_validate_environment  = true
-hostpool_custom_rdp_properties = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
-#scaling_plan_sp_id = "66080947-954d-4adb-933c-293d3bbb3441"    Removed hard coded value. looked up from static client id of d4723dbb-543b-49e1-adfa-2a112c7bfe75
+rg_so                                  = "rg-service-objects-npd"
+rg_pool                                = "rg-it01-pool-npd"
+user_group_name                        = "avd_users_cloud"
+hostpool_start_vm_on_connect           = true
+hostpool_validate_environment          = true
+hostpool_custom_rdp_properties         = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
 avd_service_principal_object_id        = "66080947-954d-4adb-933c-293d3bbb3441"
 key_vault_name                         = "kv-avd-itm-npd"
 workspace_name                         = "workspace-npd"
@@ -17,7 +16,7 @@ host_pools = [
   {
     name                                   = "pool-itm001"
     resource_group_name                    = "rg-pool-itm001-npd"
-    avd_users_principal_id                 = "60de146c-3d1a-46b6-839a-fd84d669b465"
+    avd_users_group                        = "avd_users_cloud"
     app_group_name                         = "app-itm001"
     app_group_default_desktop_display_name = "itm001"
     scaling_plan_name                      = "sp-itm001-npd"

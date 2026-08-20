@@ -9,6 +9,10 @@ terraform {
       source  = "Azure/azapi"
       version = "~> 2.0"
     }
+    azuread = {
+      source  = "hashicorp/azuread"
+      version = "~> 3.9.0"
+    }
   }
   # backend "azurerm" {
   #   resource_group_name  = "rg-terraform-state"
@@ -32,4 +36,8 @@ provider "azurerm" {
   storage_use_azuread             = true
   resource_provider_registrations = "none"
   features {}
+}
+
+provider "azuread" {
+  tenant_id = var.tenant_id
 }

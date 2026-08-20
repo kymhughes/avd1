@@ -8,13 +8,6 @@
 #           The AVM typed object only supports 11 named fields and silently drops anything else.
 
 
-# Commended out temporarily due to missing Entra ID access
-# data "azuread_group" "avd_users" {
-#   display_name     = var.user_group_name
-#   security_enabled = true
-# }
-
-
 data "azurerm_resource_group" "service_objects" {
   name = var.rg_so
 }
@@ -97,7 +90,7 @@ resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
 resource "azurerm_role_assignment" "host_pool_mi_network_contributor" {
   for_each = local.host_pools
 
-  scope                = azurerm_resource_group.compute[each.key].id
+  scope                = "/subscriptions/${var.spoke_subscription_id}"
   role_definition_name = "Network Contributor"
   principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
 }
@@ -120,7 +113,6 @@ resource "azurerm_role_assignment" "host_pool_mi_keyvault_secrets_user" {
 
 
 
-
 locals {
   host_pools = length(var.host_pools) > 0 ? {
     for host_pool in var.host_pools : host_pool.name => host_pool
@@ -128,6 +120,7 @@ locals {
     (var.hostpool_name) = {
       name                                   = var.hostpool_name
       resource_group_name                    = var.rg_pool
+      avd_users_group                        = var.avd_users_group
       app_group_name                         = var.app_group_name
       app_group_default_desktop_display_name = var.app_group_default_desktop_display_name
       app_group_type                         = var.app_group_type
@@ -145,6 +138,13 @@ locals {
       scaling_plan_description               = var.scaling_plan_description
     }
   }
+}
+
+data "azuread_group" "avd_users" {
+  for_each = local.host_pools
+
+  display_name     = coalesce(each.value.avd_users_group, var.avd_users_group)
+  security_enabled = true
 }
 
 resource "azurerm_resource_group" "compute" {
@@ -270,7 +270,7 @@ resource "azurerm_role_assignment" "avd_users" {
 
   scope                = azurerm_virtual_desktop_application_group.this[each.key].id
   role_definition_name = "Desktop Virtualization User"
-  principal_id         = coalesce(each.value.avd_users_principal_id, var.avd_users_principal_id)
+  principal_id         = data.azuread_group.avd_users[each.key].object_id
 }
 
 resource "azurerm_virtual_desktop_workspace_application_group_association" "this" {
