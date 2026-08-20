@@ -9,6 +9,18 @@ variable "tenant_id" {
   default     = null
 }
 
+variable "prefix" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "environment" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
 variable "spoke_subscription_id" {
   type        = string
   description = "Spoke subscription ID"
@@ -23,6 +35,12 @@ variable "tags" {
   type        = map(string)
   description = "Tags applied to supported resources."
   default     = {}
+}
+
+variable "enable_telemetry" {
+  type        = bool
+  description = "Compatibility variable for shared environment tfvars."
+  default     = true
 }
 
 variable "rg_storage_name" {

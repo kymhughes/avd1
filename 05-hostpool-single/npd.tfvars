@@ -59,8 +59,7 @@ session_host_configuration = {
   }
 
   domainInfo = {
-    joinType                 = "AzureActiveDirectory"
-    azureActiveDirectoryInfo = {}
+    joinType = "AzureActiveDirectory"
   }
 
   securityInfo = {

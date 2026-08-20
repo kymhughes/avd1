@@ -49,8 +49,7 @@ host_pools = [
       }
 
       domainInfo = {
-        joinType                 = "AzureActiveDirectory"
-        azureActiveDirectoryInfo = {}
+        joinType = "AzureActiveDirectory"
         #azureActiveDirectoryInfo = {       #Not applicable for server 2022
         #  mdmProviderGuid = "0000000a-0000-0000-c000-000000000000"
         #}
