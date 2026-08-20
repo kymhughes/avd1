@@ -23,20 +23,29 @@ host_pools = [
     scaling_plan_friendly_name             = "ITM001 NPD Dynamic Autoscale"
     scaling_plan_description               = "Default dynamic autoscale plan for ITM001 NPD."
     session_host_configuration = {
-      friendlyName    = "ITM001 NPD session hosts"
-      vmLocation      = "australiaeast"
-      vmNamePrefix    = "itm001"
-      vmResourceGroup = "rg-pool-itm001-npd"
-      vmSizeId        = "Standard_D2s_v5"
+      friendlyName = "ITM001 NPD session hosts"
+      vmLocation   = "australiaeast"
+      vmNamePrefix = "itm001"
+      vmSizeId     = "Standard_D2s_v5"
+
+      # Windows 11 AVD image retained for reference.
+      # imageInfo = {
+      #   type = "Marketplace"
+      #   marketplaceInfo = {
+      #     publisher    = "MicrosoftWindowsDesktop"
+      #     offer        = "windows-11"
+      #     sku          = "win11-25h2-avd"
+      #     exactVersion = "26200.9168.260809"
+      #   }
+      # }
 
       imageInfo = {
         type = "Marketplace"
         marketplaceInfo = {
-          publisher = "MicrosoftWindowsDesktop"
-          offer     = "windows-11"
-          sku       = "win11-25h2-avd"
-          #exactVersion = "latest"
-          exactVersion = "26200.9168.260809"
+          publisher    = "MicrosoftWindowsServer"
+          offer        = "WindowsServer"
+          sku          = "2022-datacenter-azure-edition"
+          exactVersion = "20348.5499.260809"
         }
       }
 
