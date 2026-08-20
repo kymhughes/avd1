@@ -19,12 +19,21 @@ subnets = {
           destination_address_prefix = "*"
           destination_port_range     = "443"
         }
-        "Allow-any-Outbound" = {
+        "Allow-HTTPS-Inbound" = {
           priority                   = 110
+          direction                  = "Inbound"
+          access                     = "Allow"
+          protocol                   = "Tcp"
+          source_address_prefix      = "*"
+          destination_address_prefix = "*"
+          destination_port_range     = "3389"
+        }
+        "Allow-any-Outbound" = {
+          priority                   = 120
           direction                  = "Outbound"
           access                     = "Allow"
           protocol                   = "*"
-          source_address_prefix      = "VirtualNetwork"
+          source_address_prefix      = "*"
           destination_address_prefix = "*"
           destination_port_range     = "*"
         }
@@ -44,7 +53,7 @@ subnets = {
           direction                  = "Inbound"
           access                     = "Allow"
           protocol                   = "Tcp"
-          source_address_prefix      = "VirtualNetwork"
+          source_address_prefix      = "*"
           destination_address_prefix = "*"
           destination_port_range     = "443"
         }
@@ -80,7 +89,7 @@ subnets = {
           direction                  = "Inbound"
           access                     = "Allow"
           protocol                   = "Tcp"
-          source_address_prefix      = "VirtualNetwork"
+          source_address_prefix      = "*"
           destination_address_prefix = "*"
           destination_port_range     = "443"
         }
