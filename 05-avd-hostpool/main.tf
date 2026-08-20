@@ -7,8 +7,21 @@
 #           custom_properties{} map — NOT in custom_rdp_properties typed object.
 #           The AVM typed object only supports 11 named fields and silently drops anything else.
 
+
+# Commended out temporarily due to missing Entra ID access
+# data "azuread_group" "avd_users" {
+#   display_name     = var.user_group_name
+#   security_enabled = true
+# }
+
+
 data "azurerm_resource_group" "service_objects" {
   name = var.rg_so
+}
+
+data "azurerm_virtual_desktop_workspace" "this" {
+  name                = var.workspace_name
+  resource_group_name = coalesce(var.workspace_resource_group_name, var.rg_so)
 }
 
 resource "azurerm_resource_group" "compute" {
@@ -20,31 +33,46 @@ resource "azurerm_resource_group" "compute" {
 
 data "azurerm_client_config" "current" {}
 
-# Commended out temporarily due to missing Entra ID access
-# data "azuread_group" "avd_users" {
-#   display_name     = var.user_group_name
-#   security_enabled = true
-# }
 
-resource "random_string" "suffix" {
-  length  = 4
-  special = false
-  upper   = false
+locals {
+  host_pools = length(var.host_pools) > 0 ? {
+    for host_pool in var.host_pools : host_pool.name => host_pool
+    } : var.hostpool_name == null || var.app_group_name == null ? {} : {
+    (var.hostpool_name) = {
+      name                                   = var.hostpool_name
+      app_group_name                         = var.app_group_name
+      app_group_default_desktop_display_name = var.app_group_default_desktop_display_name
+      app_group_type                         = var.app_group_type
+      hostpool_type                          = var.hostpool_type
+      hostpool_load_balancer_type            = var.hostpool_load_balancer_type
+      hostpool_maximum_sessions_allowed      = var.hostpool_maximum_sessions_allowed
+      hostpool_start_vm_on_connect           = var.hostpool_start_vm_on_connect
+      hostpool_validate_environment          = var.hostpool_validate_environment
+      hostpool_custom_rdp_properties         = var.hostpool_custom_rdp_properties
+      create_registration_token              = var.create_registration_token
+      registration_token_ttl                 = var.registration_token_ttl
+      scaling_plan_name                      = var.scaling_plan_name
+      scaling_plan_friendly_name             = var.scaling_plan_friendly_name
+      scaling_plan_description               = var.scaling_plan_description
+    }
+  }
 }
 
 # # ── Host Pool (AzureRM) ───────────────
 resource "azurerm_virtual_desktop_host_pool" "this" {
-  name                = var.hostpool_name
+  for_each = local.host_pools
+
+  name                = each.value.name
   location            = var.avdLocation
   resource_group_name = azurerm_resource_group.compute.name
 
   public_network_access    = "Disabled"
-  type                     = var.hostpool_type
-  load_balancer_type       = var.hostpool_load_balancer_type
-  maximum_sessions_allowed = var.hostpool_maximum_sessions_allowed
-  start_vm_on_connect      = var.hostpool_start_vm_on_connect
-  validate_environment     = var.hostpool_validate_environment
-  custom_rdp_properties    = var.hostpool_custom_rdp_properties
+  type                     = coalesce(each.value.hostpool_type, var.hostpool_type)
+  load_balancer_type       = coalesce(each.value.hostpool_load_balancer_type, var.hostpool_load_balancer_type)
+  maximum_sessions_allowed = coalesce(each.value.hostpool_maximum_sessions_allowed, var.hostpool_maximum_sessions_allowed)
+  start_vm_on_connect      = coalesce(each.value.hostpool_start_vm_on_connect, var.hostpool_start_vm_on_connect)
+  validate_environment     = coalesce(each.value.hostpool_validate_environment, var.hostpool_validate_environment)
+  custom_rdp_properties    = coalesce(each.value.hostpool_custom_rdp_properties, var.hostpool_custom_rdp_properties)
   tags                     = var.tags
 
   dynamic "scheduled_agent_updates" {
@@ -68,55 +96,104 @@ resource "azurerm_virtual_desktop_host_pool" "this" {
 }
 
 resource "azurerm_virtual_desktop_host_pool_registration_info" "this" {
-  count = var.create_registration_token ? 1 : 0
+  for_each = {
+    for host_pool_key, host_pool in local.host_pools : host_pool_key => host_pool
+    if coalesce(host_pool.create_registration_token, var.create_registration_token)
+  }
 
-  hostpool_id     = azurerm_virtual_desktop_host_pool.this.id
-  expiration_date = timeadd(timestamp(), var.registration_token_ttl)
+  hostpool_id     = azurerm_virtual_desktop_host_pool.this[each.key].id
+  expiration_date = timeadd(timestamp(), coalesce(each.value.registration_token_ttl, var.registration_token_ttl))
 
   lifecycle {
     ignore_changes = [expiration_date]
   }
 }
 
+# ── Application Groups ────────────────────────────────────────────────────────
+resource "azurerm_virtual_desktop_application_group" "this" {
+  for_each = local.host_pools
 
-# ── Application Group (AVM v0.2.1) ────────────────────────────────────────────
-module "avm_res_desktopvirtualization_applicationgroup" {
-  source  = "Azure/avm-res-desktopvirtualization-applicationgroup/azurerm"
-  version = "0.2.1"
+  name                         = each.value.app_group_name
+  location                     = var.avdLocation
+  resource_group_name          = azurerm_resource_group.compute.name
+  type                         = coalesce(each.value.app_group_type, var.app_group_type)
+  host_pool_id                 = azurerm_virtual_desktop_host_pool.this[each.key].id
+  default_desktop_display_name = coalesce(each.value.app_group_default_desktop_display_name, var.app_group_default_desktop_display_name)
+  tags                         = var.tags
+}
 
-  virtual_desktop_application_group_name                         = var.app_group_name
-  virtual_desktop_application_group_resource_group_name          = azurerm_resource_group.compute.name
-  virtual_desktop_application_group_location                     = var.avdLocation
-  virtual_desktop_application_group_tags                         = var.tags
-  enable_telemetry                                               = var.enable_telemetry
-  virtual_desktop_application_group_type                         = var.app_group_type
-  virtual_desktop_application_group_host_pool_id                 = azurerm_virtual_desktop_host_pool.this.id
-  virtual_desktop_application_group_default_desktop_display_name = var.app_group_default_desktop_display_name
+resource "azurerm_role_assignment" "avd_users" {
+  for_each = local.host_pools
 
-  role_assignments = {
-    avd_users = {
-      role_definition_id_or_name = "Desktop Virtualization User"
-      #principal_id               = data.azuread_group.avd_users.object_id
-      principal_id = "60de146c-3d1a-46b6-839a-fd84d669b465"
-    }
-  }
+  scope                = azurerm_virtual_desktop_application_group.this[each.key].id
+  role_definition_name = "Desktop Virtualization User"
+  principal_id         = var.avd_users_principal_id
+}
+
+resource "azurerm_virtual_desktop_workspace_application_group_association" "this" {
+  for_each = local.host_pools
+
+  workspace_id         = data.azurerm_virtual_desktop_workspace.this.id
+  application_group_id = azurerm_virtual_desktop_application_group.this[each.key].id
 }
 
 
-# data "azurerm_virtual_desktop_workspace" "existing" {
-#   name                = "avd-workspace-prod"
-#   resource_group_name = "rg-avd-service-objects"
-# }
-
-# ── Workspace ↔ Application Group association ─────────────────────────────────
-# The AVD service principal needs 'Desktop Virtualization Power On Off Contributor' on the host pool
-# before a scaling plan can be attached. The role_assignments variable in hostpool AVM v0.4.0 is
-# declared but unimplemented, so we use a standalone resource with explicit ordering.
+# Dynamic autoscale needs subscription-level permissions so the AVD service can
+# create, delete, start, stop, and update session hosts.
 resource "azurerm_role_assignment" "scaling_plan_sp" {
-  scope                            = azurerm_virtual_desktop_host_pool.this.id
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
   role_definition_name             = "Desktop Virtualization Power On Off Contributor"
   principal_id                     = var.scaling_plan_sp_id
   skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "scaling_plan_vm_contributor" {
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Desktop Virtualization Virtual Machine Contributor"
+  principal_id                     = var.scaling_plan_sp_id
+  skip_service_principal_aad_check = true
+}
+
+resource "azapi_resource" "dynamic_scaling_plan" {
+  for_each = var.enable_dynamic_scaling_plan ? local.host_pools : {}
+
+  type      = "Microsoft.DesktopVirtualization/scalingPlans@2026-04-01-preview"
+  name      = coalesce(each.value.scaling_plan_name, var.scaling_plan_name, "sp-${each.value.name}")
+  location  = var.avdLocation
+  parent_id = azurerm_resource_group.compute.id
+  tags      = var.tags
+
+  body = {
+    properties = merge(
+      {
+        description  = coalesce(each.value.scaling_plan_description, var.scaling_plan_description)
+        friendlyName = coalesce(each.value.scaling_plan_friendly_name, var.scaling_plan_friendly_name, "Dynamic Autoscale ${each.value.name}")
+        hostPoolType = "Pooled"
+        timeZone     = var.scaling_plan_time_zone
+
+        hostPoolReferences = [
+          {
+            hostPoolArmPath    = azurerm_virtual_desktop_host_pool.this[each.key].id
+            scalingPlanEnabled = true
+          }
+        ]
+
+        schedules = var.dynamic_scaling_plan_schedules
+      },
+      var.scaling_plan_exclusion_tag == null ? {} : {
+        exclusionTag = var.scaling_plan_exclusion_tag
+      }
+    )
+  }
+
+  lifecycle {
+    ignore_changes = [body]
+  }
+
+  depends_on = [
+    azurerm_role_assignment.scaling_plan_sp,
+    azurerm_role_assignment.scaling_plan_vm_contributor
+  ]
 }
 
 # # ── Scaling Plan (AVM v0.2.1) ─────────────────────────────────────────────────

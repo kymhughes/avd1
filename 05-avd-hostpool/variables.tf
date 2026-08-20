@@ -66,6 +66,7 @@ variable "user_group_name" {
 variable "hostpool_name" {
   type        = string
   description = "AVD host pool name."
+  default     = null
 }
 
 variable "hostpool_type" {
@@ -143,12 +144,13 @@ variable "registration_token_ttl" {
 variable "app_group_name" {
   type        = string
   description = "Desktop application group name."
+  default     = null
 }
 
 variable "app_group_type" {
   type        = string
   description = "Application group type."
-  default     = "RemoteApp"
+  default     = "Desktop"
 }
 
 variable "app_group_default_desktop_display_name" {
@@ -157,7 +159,130 @@ variable "app_group_default_desktop_display_name" {
   default     = "Session Desktop"
 }
 
+variable "workspace_name" {
+  type        = string
+  description = "AVD workspace name to associate all application groups with."
+}
+
+variable "workspace_resource_group_name" {
+  type        = string
+  description = "Resource group containing the AVD workspace. Defaults to rg_so."
+  default     = null
+}
+
+variable "avd_users_principal_id" {
+  type        = string
+  description = "Principal ID granted Desktop Virtualization User on each application group."
+  default     = "60de146c-3d1a-46b6-839a-fd84d669b465"
+}
+
 variable "scaling_plan_sp_id" {
   type        = string
   description = "Object ID of the AVD service principal used for scaling plan power operations."
+}
+
+variable "host_pools" {
+  description = "Host pools and matching desktop application groups to create."
+  type = list(object({
+    name                                   = string
+    app_group_name                         = string
+    app_group_default_desktop_display_name = optional(string)
+    app_group_type                         = optional(string)
+    hostpool_type                          = optional(string)
+    hostpool_load_balancer_type            = optional(string)
+    hostpool_maximum_sessions_allowed      = optional(number)
+    hostpool_start_vm_on_connect           = optional(bool)
+    hostpool_validate_environment          = optional(bool)
+    hostpool_custom_rdp_properties         = optional(string)
+    create_registration_token              = optional(bool)
+    registration_token_ttl                 = optional(string)
+    scaling_plan_name                      = optional(string)
+    scaling_plan_friendly_name             = optional(string)
+    scaling_plan_description               = optional(string)
+  }))
+  default = []
+}
+
+variable "enable_dynamic_scaling_plan" {
+  type        = bool
+  description = "Create an AVD dynamic autoscale scaling plan."
+  default     = true
+}
+
+variable "scaling_plan_name" {
+  type        = string
+  description = "AVD dynamic scaling plan name."
+  default     = null
+}
+
+variable "scaling_plan_friendly_name" {
+  type        = string
+  description = "Friendly display name for the AVD dynamic scaling plan."
+  default     = null
+}
+
+variable "scaling_plan_description" {
+  type        = string
+  description = "Description for the AVD dynamic scaling plan."
+  default     = "Dynamic autoscale scaling plan for Azure Virtual Desktop."
+}
+
+variable "scaling_plan_time_zone" {
+  type        = string
+  description = "Time zone used by the AVD dynamic scaling plan."
+  default     = "AUS Eastern Standard Time"
+}
+
+variable "scaling_plan_exclusion_tag" {
+  type        = string
+  description = "Optional tag name used to exclude session hosts from autoscale."
+  default     = null
+}
+
+variable "dynamic_scaling_plan_schedules" {
+  description = "Default dynamic autoscale schedules. Created by Terraform, then ignored so operators can tune schedules later."
+  type = list(object({
+    name       = string
+    daysOfWeek = list(string)
+
+    scalingMethod = string
+
+    createDelete = object({
+      rampUpMinimumHostPoolSize   = number
+      rampUpMaximumHostPoolSize   = number
+      rampDownMinimumHostPoolSize = number
+      rampDownMaximumHostPoolSize = number
+    })
+
+    rampUpStartTime = object({
+      hour   = number
+      minute = number
+    })
+    peakStartTime = object({
+      hour   = number
+      minute = number
+    })
+    rampDownStartTime = object({
+      hour   = number
+      minute = number
+    })
+    offPeakStartTime = object({
+      hour   = number
+      minute = number
+    })
+
+    rampUpLoadBalancingAlgorithm   = string
+    peakLoadBalancingAlgorithm     = string
+    rampDownLoadBalancingAlgorithm = string
+    offPeakLoadBalancingAlgorithm  = string
+    rampUpMinimumHostsPct          = number
+    rampUpCapacityThresholdPct     = number
+    rampDownMinimumHostsPct        = number
+    rampDownCapacityThresholdPct   = number
+    rampDownForceLogoffUsers       = bool
+    rampDownWaitTimeMinutes        = number
+    rampDownNotificationMessage    = string
+    rampDownStopHostsWhen          = string
+  }))
+  default = []
 }
