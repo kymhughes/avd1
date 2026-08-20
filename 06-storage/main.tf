@@ -111,15 +111,20 @@ resource "azapi_resource" "storage_account" {
   }
 }
 
-# ── FSLogix File Share ────────────────────────────────────────────────────────
-resource "azurerm_storage_share" "shares" {
+# ── Azure Files Shares ────────────────────────────────────────────────────────
+resource "azapi_resource" "shares" {
   for_each = local.shares
 
-  provider           = azurerm.spoke
-  name               = each.value.name
-  storage_account_id = azapi_resource.storage_account[each.value.storage_key].id
-  quota              = each.value.quota_gb
-  enabled_protocol   = "SMB"
+  type      = "Microsoft.Storage/storageAccounts/fileServices/shares@2023-05-01"
+  name      = "default/${each.value.name}"
+  parent_id = azapi_resource.storage_account[each.value.storage_key].id
+
+  body = {
+    properties = {
+      shareQuota       = each.value.quota_gb
+      enabledProtocols = "SMB"
+    }
+  }
 }
 
 # ── Private DNS Zone for Files (pre-existing in hub) ─────────────────────
@@ -178,6 +183,6 @@ resource "azurerm_role_assignment" "share_smb" {
   principal_id         = data.azuread_group.rbac_groups[each.value.group_name].object_id
 
   depends_on = [
-    azurerm_storage_share.shares
+    azapi_resource.shares
   ]
 }
