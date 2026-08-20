@@ -216,7 +216,7 @@ resource "azapi_resource" "session_host_configuration" {
     azurerm_role_assignment.avd_keyvault_secrets_user,
     azurerm_role_assignment.host_pool_mi_network_contributor,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
-    azurerm_role_assignment.avd_network_contributor,    
+    azurerm_role_assignment.avd_network_contributor,
     azurerm_role_assignment.host_pool_mi_subscription_reader,
     azurerm_role_assignment.host_pool_mi_keyvault_secrets_user
   ]
@@ -327,7 +327,7 @@ resource "azapi_resource" "dynamic_scaling_plan" {
     azurerm_role_assignment.avd_keyvault_secrets_user,
     azurerm_role_assignment.host_pool_mi_network_contributor,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
-    azurerm_role_assignment.avd_network_contributor,    
+    azurerm_role_assignment.avd_network_contributor,
     azurerm_role_assignment.host_pool_mi_subscription_reader,
     azurerm_role_assignment.host_pool_mi_keyvault_secrets_user
   ]
