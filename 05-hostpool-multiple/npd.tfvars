@@ -4,7 +4,7 @@ user_group_name                = "avd_users_cloud"
 hostpool_start_vm_on_connect   = true
 hostpool_validate_environment  = true
 hostpool_custom_rdp_properties = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
-#scaling_plan_sp_id = "dfd8494f-c248-461d-b8e5-68229c096be7"    Removed hard coded value. looked up from static client id of d4723dbb-543b-49e1-adfa-2a112c7bfe75
+#scaling_plan_sp_id = "66080947-954d-4adb-933c-293d3bbb3441"    Removed hard coded value. looked up from static client id of d4723dbb-543b-49e1-adfa-2a112c7bfe75
 workspace_name = "workspace-npd"
 
 host_pools = [
