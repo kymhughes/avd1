@@ -40,15 +40,6 @@ data "azurerm_client_config" "current" {}
 
 
 
-
-# this is redundant when VM Contributor is used.
-# resource "azurerm_role_assignment" "avd_power_on_off" {
-#   scope                            = "/subscriptions/${var.spoke_subscription_id}"
-#   role_definition_name             = "Desktop Virtualization Power On Off Contributor"
-#   principal_id                     = var.avd_service_principal_object_id
-#   skip_service_principal_aad_check = true
-# }
-
 ###################################################################################
 #Assign nesssesary roles to the AVD service principal for dynamic autoscale to work
 ###################################################################################
