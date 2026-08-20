@@ -49,6 +49,35 @@ resource "azurerm_role_assignment" "avd_vm_contributor" {
   principal_id         = data.azuread_service_principal.avd.object_id
 }
 
+# Dynamic autoscale needs subscription-level permissions so the AVD service can
+# create, delete, start, stop, and update session hosts.
+resource "azurerm_role_assignment" "scaling_plan_sp" {
+  scope                = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name = "Desktop Virtualization Power On Off Contributor"
+  #principal_id                     = var.scaling_plan_sp_id
+  principal_id                     = data.azuread_service_principal.avd.object_id
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "scaling_plan_vm_contributor" {
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Desktop Virtualization Virtual Machine Contributor"
+  principal_id                     = data.azuread_service_principal.avd.object_id
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
+  for_each = local.host_pools
+
+  scope                = azurerm_resource_group.compute[each.key].id
+  role_definition_name = "Desktop Virtualization Virtual Machine Contributor"
+  principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
+}
+
+
+
+
+
 
 locals {
   host_pools = length(var.host_pools) > 0 ? {
@@ -166,30 +195,6 @@ resource "azurerm_virtual_desktop_workspace_application_group_association" "this
 }
 
 
-# Dynamic autoscale needs subscription-level permissions so the AVD service can
-# create, delete, start, stop, and update session hosts.
-resource "azurerm_role_assignment" "scaling_plan_sp" {
-  scope                = "/subscriptions/${var.spoke_subscription_id}"
-  role_definition_name = "Desktop Virtualization Power On Off Contributor"
-  #principal_id                     = var.scaling_plan_sp_id
-  principal_id                     = data.azuread_service_principal.avd.object_id
-  skip_service_principal_aad_check = true
-}
-
-resource "azurerm_role_assignment" "scaling_plan_vm_contributor" {
-  scope                            = "/subscriptions/${var.spoke_subscription_id}"
-  role_definition_name             = "Desktop Virtualization Virtual Machine Contributor"
-  principal_id                     = var.scaling_plan_sp_id
-  skip_service_principal_aad_check = true
-}
-
-resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
-  for_each = local.host_pools
-
-  scope                = azurerm_resource_group.compute[each.key].id
-  role_definition_name = "Desktop Virtualization Virtual Machine Contributor"
-  principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
-}
 
 resource "azapi_resource" "dynamic_scaling_plan" {
   for_each = var.enable_dynamic_scaling_plan ? local.host_pools : {}
