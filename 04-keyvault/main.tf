@@ -18,6 +18,7 @@ resource "random_password" "local" {
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
+
 # ── Private DNS Zone for Key Vault (pre-existing in hub) ─────────────────────
 data "azurerm_private_dns_zone" "kv_dns" {
   provider            = azurerm.hub
@@ -86,6 +87,14 @@ module "avm_res_keyvault_vault" {
   # }
 }
 
+resource "time_sleep" "wait_for_keyvault_private_endpoint" {
+  create_duration = "120s"
+
+  depends_on = [
+    module.avm_res_keyvault_vault
+  ]
+}
+
 resource "azurerm_key_vault_secret" "vm_local_admin_username" {
   provider = azurerm.spoke
 
@@ -95,7 +104,9 @@ resource "azurerm_key_vault_secret" "vm_local_admin_username" {
   content_type = "AVD session host local administrator username"
   tags         = var.tags
 
-  depends_on = [module.avm_res_keyvault_vault]
+  depends_on = [
+    time_sleep.wait_for_keyvault_private_endpoint
+  ]
 }
 
 resource "azurerm_key_vault_secret" "vm_local_admin_password" {
@@ -107,7 +118,9 @@ resource "azurerm_key_vault_secret" "vm_local_admin_password" {
   content_type = "AVD session host local administrator password"
   tags         = var.tags
 
-  depends_on = [module.avm_res_keyvault_vault]
+  depends_on = [
+    time_sleep.wait_for_keyvault_private_endpoint
+  ]
 }
 
 
