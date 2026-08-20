@@ -50,7 +50,7 @@ module "avm_res_keyvault_vault" {
     bypass         = "AzureServices"
     default_action = "Deny"
   }
-  
+
   private_endpoints = {
     vault = {
       name                            = var.keyvault_pe_name
