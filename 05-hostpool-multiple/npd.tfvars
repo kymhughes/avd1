@@ -4,7 +4,7 @@ user_group_name                        = "avd_users_cloud"
 hostpool_start_vm_on_connect           = true
 hostpool_validate_environment          = true
 hostpool_custom_rdp_properties         = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
-avd_service_principal_object_id        = "66080947-954d-4adb-933c-293d3bbb3441"
+avd_service_principal_object_id        = "66080947-954d-4adb-933c-293d3bbb3441" # this is the object iD for "Azure Virtual Desktop"
 key_vault_name                         = "kv-avd-itm-npd"
 workspace_name                         = "workspace-npd"
 rg_network                             = "rg-itm-network-npd"
@@ -81,10 +81,10 @@ host_pools = [
   }
 ]
 
+
 enable_dynamic_scaling_plan = true
 scaling_plan_time_zone      = "AUS Eastern Standard Time"
 scaling_plan_exclusion_tag  = "excludeFromScaling"
-
 dynamic_scaling_plan_schedules = [
   {
     name       = "Weekdays"
