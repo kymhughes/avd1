@@ -70,6 +70,11 @@ variable "vm_local_admin_password_secret_name" {
   default     = "local-password"
 }
 
+variable "avd_service_principal_object_id" {
+  type        = string
+  description = "Object ID of the Azure Virtual Desktop service principal that reads session host admin secrets."
+}
+
 variable "hub_dns_zone_rg" {
   type        = string
   description = "Hub resource group containing private DNS zones."

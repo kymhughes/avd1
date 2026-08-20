@@ -84,3 +84,8 @@ variable "workspace_sc_name" {
   type        = string
   description = "Workspace service connection name."
 }
+
+variable "avd_service_principal_object_id" {
+  type        = string
+  description = "Object ID of the Azure Virtual Desktop service principal used for dynamic autoscale."
+}

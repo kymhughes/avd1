@@ -63,3 +63,35 @@ resource "azurerm_private_endpoint" "workspace_pe" {
   depends_on = [module.avm_res_desktopvirtualization_workspace]
   lifecycle { prevent_destroy = false }
 }
+
+###################################################################################
+# Assign necessary subscription-level roles to the AVD service principal for
+# dynamic autoscale/session host configuration.
+###################################################################################
+resource "azurerm_role_assignment" "avd_reader" {
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Reader"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "avd_vm_on_off_contributor" {
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Desktop Virtualization Power On Off Contributor"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "avd_vm_contributor" {
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Desktop Virtualization Virtual Machine Contributor"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "avd_network_contributor" {
+  scope                            = "/subscriptions/${var.spoke_subscription_id}"
+  role_definition_name             = "Network Contributor"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
+}

@@ -96,6 +96,19 @@ resource "time_sleep" "wait_for_keyvault_private_endpoint" {
   ]
 }
 
+resource "azurerm_role_assignment" "avd_keyvault_secrets_user" {
+  provider = azurerm.spoke
+
+  scope                            = module.avm_res_keyvault_vault.resource_id
+  role_definition_name             = "Key Vault Secrets User"
+  principal_id                     = var.avd_service_principal_object_id
+  skip_service_principal_aad_check = true
+
+  depends_on = [
+    module.avm_res_keyvault_vault
+  ]
+}
+
 resource "azurerm_key_vault_secret" "vm_local_admin_username" {
   provider = azurerm.spoke
 
@@ -137,4 +150,3 @@ resource "azurerm_key_vault_secret" "vm_local_admin_password" {
     time_sleep.wait_for_keyvault_private_endpoint
   ]
 }
-
