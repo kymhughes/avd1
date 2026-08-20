@@ -89,7 +89,7 @@ resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
   principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
 }
 # resource group Network Contributor
-resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
+resource "azurerm_role_assignment" "host_pool_mi_network_contributor" {
   for_each = local.host_pools
 
   scope                = azurerm_resource_group.compute[each.key].id
@@ -207,6 +207,7 @@ resource "azapi_resource" "session_host_configuration" {
     azurerm_role_assignment.avd_vm_on_off_contributor,
     azurerm_role_assignment.avd_vm_contributor,
     azurerm_role_assignment.avd_keyvault_secrets_user,
+    azurerm_role_assignment.host_pool_mi_network_contributor,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
     azurerm_role_assignment.host_pool_mi_subscription_reader,
     azurerm_role_assignment.host_pool_mi_keyvault_secrets_user
@@ -316,6 +317,7 @@ resource "azapi_resource" "dynamic_scaling_plan" {
     azurerm_role_assignment.avd_vm_on_off_contributor,
     azurerm_role_assignment.avd_vm_contributor,
     azurerm_role_assignment.avd_keyvault_secrets_user,
+    azurerm_role_assignment.host_pool_mi_network_contributor,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
     azurerm_role_assignment.host_pool_mi_subscription_reader,
     azurerm_role_assignment.host_pool_mi_keyvault_secrets_user
