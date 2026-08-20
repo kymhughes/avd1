@@ -111,25 +111,13 @@ resource "azapi_resource" "storage_account" {
   }
 }
 
-resource "azapi_resource" "file_service" {
-  for_each = local.storage_accounts
-
-  type      = "Microsoft.Storage/storageAccounts/fileServices@2023-05-01"
-  name      = "default"
-  parent_id = azapi_resource.storage_account[each.key].id
-
-  body = {
-    properties = {}
-  }
-}
-
 # ── Azure Files Shares ────────────────────────────────────────────────────────
 resource "azapi_resource" "shares" {
   for_each = local.shares
 
   type      = "Microsoft.Storage/storageAccounts/fileServices/shares@2023-05-01"
   name      = each.value.name
-  parent_id = azapi_resource.file_service[each.value.storage_key].id
+  parent_id = "${azapi_resource.storage_account[each.value.storage_key].id}/fileServices/default"
 
   body = {
     properties = {
