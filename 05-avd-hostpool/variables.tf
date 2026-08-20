@@ -207,19 +207,19 @@ variable "host_pools" {
 
 variable "enable_dynamic_scaling_plan" {
   type        = bool
-  description = "Create an AVD dynamic autoscale scaling plan."
+  description = "Create an AVD autoscale scaling plan."
   default     = true
 }
 
 variable "scaling_plan_name" {
   type        = string
-  description = "AVD dynamic scaling plan name."
+  description = "AVD scaling plan name."
   default     = null
 }
 
 variable "scaling_plan_friendly_name" {
   type        = string
-  description = "Friendly display name for the AVD dynamic scaling plan."
+  description = "Friendly display name for the AVD scaling plan."
   default     = null
 }
 
@@ -231,7 +231,7 @@ variable "scaling_plan_description" {
 
 variable "scaling_plan_time_zone" {
   type        = string
-  description = "Time zone used by the AVD dynamic scaling plan."
+  description = "Time zone used by the AVD scaling plan."
   default     = "AUS Eastern Standard Time"
 }
 
@@ -242,19 +242,19 @@ variable "scaling_plan_exclusion_tag" {
 }
 
 variable "dynamic_scaling_plan_schedules" {
-  description = "Default dynamic autoscale schedules. Created by Terraform, then ignored so operators can tune schedules later."
+  description = "Default autoscale schedules. Created by Terraform, then ignored so operators can tune schedules later."
   type = list(object({
     name       = string
     daysOfWeek = list(string)
 
     scalingMethod = string
 
-    createDelete = object({
+    createDelete = optional(object({
       rampUpMinimumHostPoolSize   = number
       rampUpMaximumHostPoolSize   = number
       rampDownMinimumHostPoolSize = number
       rampDownMaximumHostPoolSize = number
-    })
+    }))
 
     rampUpStartTime = object({
       hour   = number

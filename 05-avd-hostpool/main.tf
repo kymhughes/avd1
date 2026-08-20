@@ -181,7 +181,34 @@ resource "azapi_resource" "dynamic_scaling_plan" {
           }
         ]
 
-        schedules = var.dynamic_scaling_plan_schedules
+        schedules = [
+          for schedule in var.dynamic_scaling_plan_schedules : merge(
+            {
+              name                           = schedule.name
+              daysOfWeek                     = schedule.daysOfWeek
+              scalingMethod                  = schedule.scalingMethod
+              rampUpStartTime                = schedule.rampUpStartTime
+              peakStartTime                  = schedule.peakStartTime
+              rampDownStartTime              = schedule.rampDownStartTime
+              offPeakStartTime               = schedule.offPeakStartTime
+              rampUpLoadBalancingAlgorithm   = schedule.rampUpLoadBalancingAlgorithm
+              peakLoadBalancingAlgorithm     = schedule.peakLoadBalancingAlgorithm
+              rampDownLoadBalancingAlgorithm = schedule.rampDownLoadBalancingAlgorithm
+              offPeakLoadBalancingAlgorithm  = schedule.offPeakLoadBalancingAlgorithm
+              rampUpMinimumHostsPct          = schedule.rampUpMinimumHostsPct
+              rampUpCapacityThresholdPct     = schedule.rampUpCapacityThresholdPct
+              rampDownMinimumHostsPct        = schedule.rampDownMinimumHostsPct
+              rampDownCapacityThresholdPct   = schedule.rampDownCapacityThresholdPct
+              rampDownForceLogoffUsers       = schedule.rampDownForceLogoffUsers
+              rampDownWaitTimeMinutes        = schedule.rampDownWaitTimeMinutes
+              rampDownNotificationMessage    = schedule.rampDownNotificationMessage
+              rampDownStopHostsWhen          = schedule.rampDownStopHostsWhen
+            },
+            schedule.createDelete == null ? {} : {
+              createDelete = schedule.createDelete
+            }
+          )
+        ]
       },
       var.scaling_plan_exclusion_tag == null ? {} : {
         exclusionTag = var.scaling_plan_exclusion_tag

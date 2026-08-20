@@ -29,14 +29,7 @@ dynamic_scaling_plan_schedules = [
     name       = "Weekdays"
     daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
-    scalingMethod = "CreateDeletePowerManage"
-
-    createDelete = {
-      rampUpMinimumHostPoolSize   = 1
-      rampUpMaximumHostPoolSize   = 5
-      rampDownMinimumHostPoolSize = 0
-      rampDownMaximumHostPoolSize = 3
-    }
+    scalingMethod = "PowerManage"
 
     rampUpStartTime = {
       hour   = 7
