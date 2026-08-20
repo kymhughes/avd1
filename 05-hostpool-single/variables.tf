@@ -8,6 +8,18 @@ variable "tenant_id" {
   description = "Azure tenant ID."
 }
 
+variable "prefix" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "environment" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
 variable "spoke_subscription_id" {
   type        = string
   description = "Azure subscription ID for the AVD spoke workload."
@@ -22,6 +34,12 @@ variable "tags" {
   type        = map(string)
   description = "Tags applied to supported resources."
   default     = {}
+}
+
+variable "enable_telemetry" {
+  type        = bool
+  description = "Compatibility variable for shared environment tfvars."
+  default     = true
 }
 
 variable "hub_dns_zone_rg" {
