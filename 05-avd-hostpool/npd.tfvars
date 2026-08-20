@@ -29,7 +29,14 @@ dynamic_scaling_plan_schedules = [
     name       = "Weekdays"
     daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
-    scalingMethod = "PowerManage"
+    scalingMethod = "CreateDeletePowerManage"
+
+    createDelete = {
+      rampUpMinimumHostPoolSize   = 1
+      rampUpMaximumHostPoolSize   = 2
+      rampDownMinimumHostPoolSize = 0
+      rampDownMaximumHostPoolSize = 2
+    }
 
     rampUpStartTime = {
       hour   = 7
@@ -53,10 +60,10 @@ dynamic_scaling_plan_schedules = [
     rampDownLoadBalancingAlgorithm = "DepthFirst"
     offPeakLoadBalancingAlgorithm  = "DepthFirst"
 
-    rampUpMinimumHostsPct        = 10
-    rampUpCapacityThresholdPct   = 60
-    rampDownMinimumHostsPct      = 10
-    rampDownCapacityThresholdPct = 80
+    rampUpMinimumHostsPct        = 00
+    rampUpCapacityThresholdPct   = 90
+    rampDownMinimumHostsPct      = 0
+    rampDownCapacityThresholdPct = 90
 
     rampDownForceLogoffUsers    = false
     rampDownWaitTimeMinutes     = 45

@@ -242,19 +242,19 @@ variable "scaling_plan_exclusion_tag" {
 }
 
 variable "dynamic_scaling_plan_schedules" {
-  description = "Default autoscale schedules. Created by Terraform, then ignored so operators can tune schedules later."
+  description = "Default dynamic autoscale schedules. Created by Terraform, then ignored so operators can tune schedules later."
   type = list(object({
     name       = string
     daysOfWeek = list(string)
 
     scalingMethod = string
 
-    createDelete = optional(object({
+    createDelete = object({
       rampUpMinimumHostPoolSize   = number
       rampUpMaximumHostPoolSize   = number
       rampDownMinimumHostPoolSize = number
       rampDownMaximumHostPoolSize = number
-    }))
+    })
 
     rampUpStartTime = object({
       hour   = number
