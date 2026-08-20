@@ -43,6 +43,7 @@ locals {
       hostpool_start_vm_on_connect           = var.hostpool_start_vm_on_connect
       hostpool_validate_environment          = var.hostpool_validate_environment
       hostpool_custom_rdp_properties         = var.hostpool_custom_rdp_properties
+      vm_template                            = var.host_pool_vm_template
       create_registration_token              = var.create_registration_token
       registration_token_ttl                 = var.registration_token_ttl
       scaling_plan_name                      = var.scaling_plan_name
@@ -61,54 +62,44 @@ resource "azurerm_resource_group" "compute" {
   lifecycle { prevent_destroy = false }
 }
 
-# # ── Host Pool (AzureRM) ───────────────
-resource "azurerm_virtual_desktop_host_pool" "this" {
+resource "azapi_resource" "host_pool" {
   for_each = local.host_pools
 
-  name                = each.value.name
-  location            = var.avdLocation
-  resource_group_name = azurerm_resource_group.compute[each.key].name
+  type      = "Microsoft.DesktopVirtualization/hostPools@2026-04-01-preview"
+  name      = each.value.name
+  location  = var.avdLocation
+  parent_id = azurerm_resource_group.compute[each.key].id
+  tags      = var.tags
 
-  public_network_access    = "Disabled"
-  type                     = coalesce(each.value.hostpool_type, var.hostpool_type)
-  load_balancer_type       = coalesce(each.value.hostpool_load_balancer_type, var.hostpool_load_balancer_type)
-  maximum_sessions_allowed = coalesce(each.value.hostpool_maximum_sessions_allowed, var.hostpool_maximum_sessions_allowed)
-  start_vm_on_connect      = coalesce(each.value.hostpool_start_vm_on_connect, var.hostpool_start_vm_on_connect)
-  validate_environment     = coalesce(each.value.hostpool_validate_environment, var.hostpool_validate_environment)
-  custom_rdp_properties    = coalesce(each.value.hostpool_custom_rdp_properties, var.hostpool_custom_rdp_properties)
-  tags                     = var.tags
+  identity {
+    type = "SystemAssigned"
+  }
 
-  dynamic "scheduled_agent_updates" {
-    for_each = var.scheduled_agent_updates == null ? [] : [var.scheduled_agent_updates]
+  body = {
+    properties = {
+      hostPoolType          = coalesce(each.value.hostpool_type, var.hostpool_type)
+      loadBalancerType      = coalesce(each.value.hostpool_load_balancer_type, var.hostpool_load_balancer_type)
+      maxSessionLimit       = coalesce(each.value.hostpool_maximum_sessions_allowed, var.hostpool_maximum_sessions_allowed)
+      startVMOnConnect      = coalesce(each.value.hostpool_start_vm_on_connect, var.hostpool_start_vm_on_connect)
+      validationEnvironment = coalesce(each.value.hostpool_validate_environment, var.hostpool_validate_environment)
+      customRdpProperty     = coalesce(each.value.hostpool_custom_rdp_properties, var.hostpool_custom_rdp_properties)
+      publicNetworkAccess   = "Disabled"
+      preferredAppGroupType = coalesce(each.value.app_group_type, var.app_group_type) == "Desktop" ? "Desktop" : "RailApplications"
+      managementType        = "Automated"
+      vmTemplate            = coalesce(each.value.vm_template, var.host_pool_vm_template)
 
-    content {
-      enabled                   = scheduled_agent_updates.value.enabled
-      timezone                  = scheduled_agent_updates.value.timezone
-      use_session_host_timezone = scheduled_agent_updates.value.use_session_host_timezone
-
-      dynamic "schedule" {
-        for_each = scheduled_agent_updates.value.schedules
-
-        content {
-          day_of_week = schedule.value.day_of_week
-          hour_of_day = schedule.value.hour_of_day
-        }
+      agentUpdate = var.scheduled_agent_updates == null ? null : {
+        type                      = var.scheduled_agent_updates.enabled ? "Scheduled" : "Default"
+        maintenanceWindowTimeZone = var.scheduled_agent_updates.timezone
+        useSessionHostLocalTime   = var.scheduled_agent_updates.use_session_host_timezone
+        maintenanceWindows = [
+          for schedule in var.scheduled_agent_updates.schedules : {
+            dayOfWeek = schedule.day_of_week
+            hour      = schedule.hour_of_day
+          }
+        ]
       }
     }
-  }
-}
-
-resource "azurerm_virtual_desktop_host_pool_registration_info" "this" {
-  for_each = {
-    for host_pool_key, host_pool in local.host_pools : host_pool_key => host_pool
-    if coalesce(host_pool.create_registration_token, var.create_registration_token)
-  }
-
-  hostpool_id     = azurerm_virtual_desktop_host_pool.this[each.key].id
-  expiration_date = timeadd(timestamp(), coalesce(each.value.registration_token_ttl, var.registration_token_ttl))
-
-  lifecycle {
-    ignore_changes = [expiration_date]
   }
 }
 
@@ -120,7 +111,7 @@ resource "azurerm_virtual_desktop_application_group" "this" {
   location                     = var.avdLocation
   resource_group_name          = azurerm_resource_group.compute[each.key].name
   type                         = coalesce(each.value.app_group_type, var.app_group_type)
-  host_pool_id                 = azurerm_virtual_desktop_host_pool.this[each.key].id
+  host_pool_id                 = azapi_resource.host_pool[each.key].id
   default_desktop_display_name = coalesce(each.value.app_group_default_desktop_display_name, var.app_group_default_desktop_display_name)
   tags                         = var.tags
 }
@@ -157,6 +148,14 @@ resource "azurerm_role_assignment" "scaling_plan_vm_contributor" {
   skip_service_principal_aad_check = true
 }
 
+resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
+  for_each = local.host_pools
+
+  scope                = azurerm_resource_group.compute[each.key].id
+  role_definition_name = "Desktop Virtualization Virtual Machine Contributor"
+  principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
+}
+
 resource "azapi_resource" "dynamic_scaling_plan" {
   for_each = var.enable_dynamic_scaling_plan ? local.host_pools : {}
 
@@ -176,7 +175,7 @@ resource "azapi_resource" "dynamic_scaling_plan" {
 
         hostPoolReferences = [
           {
-            hostPoolArmPath    = azurerm_virtual_desktop_host_pool.this[each.key].id
+            hostPoolArmPath    = azapi_resource.host_pool[each.key].id
             scalingPlanEnabled = true
           }
         ]
@@ -195,7 +194,8 @@ resource "azapi_resource" "dynamic_scaling_plan" {
 
   depends_on = [
     azurerm_role_assignment.scaling_plan_sp,
-    azurerm_role_assignment.scaling_plan_vm_contributor
+    azurerm_role_assignment.scaling_plan_vm_contributor,
+    azurerm_role_assignment.host_pool_mi_vm_contributor
   ]
 }
 

@@ -105,6 +105,12 @@ variable "hostpool_custom_rdp_properties" {
   default     = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
 }
 
+variable "host_pool_vm_template" {
+  type        = string
+  description = "Default VM template JSON string for automated/session-host-configuration host pools."
+  default     = null
+}
+
 variable "scheduled_agent_updates" {
   description = "Optional scheduled AVD agent update configuration."
   type = object({
@@ -196,6 +202,7 @@ variable "host_pools" {
     hostpool_start_vm_on_connect           = optional(bool)
     hostpool_validate_environment          = optional(bool)
     hostpool_custom_rdp_properties         = optional(string)
+    vm_template                            = optional(string)
     create_registration_token              = optional(bool)
     registration_token_ttl                 = optional(string)
     scaling_plan_name                      = optional(string)

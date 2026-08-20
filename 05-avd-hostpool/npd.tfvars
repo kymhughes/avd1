@@ -17,6 +17,29 @@ host_pools = [
     scaling_plan_name                      = "sp-itm001-npd"
     scaling_plan_friendly_name             = "ITM001 NPD Dynamic Autoscale"
     scaling_plan_description               = "Default dynamic autoscale plan for ITM001 NPD."
+    vm_template                            = <<EOT
+{
+  "domain": "",
+  "galleryImageOffer": "windows-11",
+  "galleryImagePublisher": "MicrosoftWindowsDesktop",
+  "galleryImageSKU": "win11-24h2-avd",
+  "imageType": "Gallery",
+  "customImageId": null,
+  "namePrefix": "itm001",
+  "osDiskType": "Premium_LRS",
+  "vmSize": {
+    "id": "Standard_D2s_v5"
+  },
+  "galleryItemId": "MicrosoftWindowsDesktop.windows-11win11-24h2-avd",
+  "hibernate": false,
+  "diskSizeGB": 128,
+  "securityType": "TrustedLaunch",
+  "secureBoot": true,
+  "vTPM": true,
+  "subnetId": "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd23faad9e/resourceGroups/rg-itm-network-npd/providers/Microsoft.Network/virtualNetworks/vnet-itm-vnet-npd/subnets/snet-itm-001",
+  "vmInfrastructureType": "Cloud"
+}
+EOT
   }
 ]
 
