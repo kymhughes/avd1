@@ -58,11 +58,6 @@ variable "rg_pool" {
   description = "Fallback host pool compute resource group name."
 }
 
-variable "user_group_name" {
-  type        = string
-  description = "AVD users security group display name."
-}
-
 variable "hostpool_name" {
   type        = string
   description = "AVD host pool name."
@@ -180,17 +175,6 @@ variable "avd_users_group" {
   type        = string
   description = "Display name of the group granted Desktop Virtualization User on each application group."
   default     = "avd_users_cloud"
-}
-
-# variable "scaling_plan_sp_id" {
-#   type        = string
-#   description = "Object ID of the AVD service principal used for scaling plan power operations."
-# }
-
-variable "avd_service_principal_object_id" {
-  type        = string
-  description = "Object ID of the Azure Virtual Desktop service principal in this tenant."
-  default     = null
 }
 
 variable "key_vault_name" {

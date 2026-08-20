@@ -7,29 +7,8 @@
 #   - AADKERB authentication for FSLogix Kerberos tickets
 
 locals {
-  storage_accounts = length(var.storage_accounts) > 0 ? var.storage_accounts : {
-    fslogix = {
-      name                            = var.storage_account_name
-      managed_identity_name           = var.storage_managed_identity_name
-      kind                            = "FileStorage"
-      sku_name                        = "Premium_LRS"
-      identity_auth_directory_service = "AADKERB"
-      private_endpoint_name           = var.file_private_endpoint_name
-      private_service_connection_name = var.file_private_service_connection_name
-      private_dns_zone_group_name     = var.file_private_dns_zone_group_name
-      private_dns_vnet_link_name      = var.file_private_dns_vnet_link_name
-      shares = {
-        fslogix = {
-          name        = var.fslogix_share_name
-          quota_gb    = var.fslogix_share_quota_gb
-          rbac_groups = [var.avd_users_group]
-        }
-      }
-    }
-  }
-
   shares = merge([
-    for storage_key, storage in local.storage_accounts : {
+    for storage_key, storage in var.storage_accounts : {
       for share_key, share in storage.shares : "${storage_key}.${share_key}" => {
         storage_key = storage_key
         share_key   = share_key
@@ -65,7 +44,7 @@ data "azuread_group" "rbac_groups" {
 
 # ── User-Assigned Managed Identity ───────────────────────────────────────────
 resource "azurerm_user_assigned_identity" "storage_mi" {
-  for_each = local.storage_accounts
+  for_each = var.storage_accounts
 
   provider            = azurerm.spoke
   name                = each.value.managed_identity_name
@@ -76,7 +55,7 @@ resource "azurerm_user_assigned_identity" "storage_mi" {
 
 # ── FSLogix Storage Account ───────────────────────────────────────────────────
 resource "azapi_resource" "storage_account" {
-  for_each = local.storage_accounts
+  for_each = var.storage_accounts
 
   type      = "Microsoft.Storage/storageAccounts@2023-05-01"
   name      = each.value.name
@@ -137,7 +116,7 @@ data "azurerm_private_dns_zone" "file_dns" {
 
 # ── Private Endpoint ──────────────────────────────────────────────────────────
 resource "azurerm_private_endpoint" "file_pe" {
-  for_each = local.storage_accounts
+  for_each = var.storage_accounts
 
   provider            = azurerm.spoke
   name                = each.value.private_endpoint_name
@@ -163,7 +142,7 @@ resource "azurerm_private_endpoint" "file_pe" {
 
 # ── Network Rules — deny all except PE subnet ─────────────────────────────────
 resource "azurerm_storage_account_network_rules" "fslogix_rules" {
-  for_each = local.storage_accounts
+  for_each = var.storage_accounts
 
   provider           = azurerm.spoke
   storage_account_id = azapi_resource.storage_account[each.key].id

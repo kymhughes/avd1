@@ -8,18 +8,6 @@ variable "tenant_id" {
   description = "Azure tenant ID."
 }
 
-variable "prefix" {
-  type        = string
-  description = "Short prefix for resource naming."
-  default     = null
-}
-
-variable "environment" {
-  type        = string
-  description = "Environment name."
-  default     = null
-}
-
 variable "spoke_subscription_id" {
   type        = string
   description = "Azure subscription ID for the AVD spoke workload."
@@ -34,12 +22,6 @@ variable "tags" {
   type        = map(string)
   description = "Tags applied to supported resources."
   default     = {}
-}
-
-variable "enable_telemetry" {
-  type        = bool
-  description = "Enable telemetry for AVM modules."
-  default     = true
 }
 
 variable "hub_dns_zone_rg" {
@@ -131,11 +113,6 @@ variable "avd_users_group" {
   type        = string
   description = "Display name of the group granted Desktop Virtualization User and VM User Login."
   default     = "avd_users_cloud"
-}
-
-variable "avd_service_principal_object_id" {
-  type        = string
-  description = "Object ID of the Azure Virtual Desktop service principal in this tenant."
 }
 
 variable "key_vault_name" {

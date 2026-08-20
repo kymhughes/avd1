@@ -8,18 +8,6 @@ variable "tenant_id" {
   description = "Azure tenant ID."
 }
 
-variable "prefix" {
-  type        = string
-  description = "Short prefix for resource naming."
-  default     = null
-}
-
-variable "environment" {
-  type        = string
-  description = "Environment name."
-  default     = null
-}
-
 variable "spoke_subscription_id" {
   type        = string
   description = "Azure subscription ID for the AVD spoke workload."
