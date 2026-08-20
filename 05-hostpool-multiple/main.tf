@@ -181,6 +181,38 @@ resource "azapi_resource" "session_host_configuration" {
   ]
 }
 
+resource "azapi_resource" "session_host_management" {
+  for_each = local.host_pools
+
+  type      = "Microsoft.DesktopVirtualization/hostPools/sessionHostManagements@2026-04-01-preview"
+  name      = "default"
+  parent_id = azapi_resource.host_pool[each.key].id
+
+  body = {
+    properties = {
+      scheduledDateTimeZone          = var.scaling_plan_time_zone
+      failedSessionHostCleanupPolicy = "KeepAll"
+
+      provisioning = {
+        canaryPolicy  = "Auto"
+        instanceCount = 1
+        setDrainMode  = false
+      }
+
+      update = {
+        maxVmsRemoved      = 1
+        logOffDelayMinutes = 2
+        logOffMessage      = "You will be signed out while this session host is updated."
+        deleteOriginalVm   = true
+      }
+    }
+  }
+
+  depends_on = [
+    azapi_resource.session_host_configuration
+  ]
+}
+
 # ── Application Groups ────────────────────────────────────────────────────────
 resource "azurerm_virtual_desktop_application_group" "this" {
   for_each = local.host_pools
@@ -254,7 +286,7 @@ resource "azapi_resource" "dynamic_scaling_plan" {
     azurerm_role_assignment.avd_keyvault_secrets_user,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
     azurerm_role_assignment.host_pool_mi_keyvault_secrets_user,
-    azapi_resource.session_host_configuration
+    azapi_resource.session_host_management
   ]
 }
 
