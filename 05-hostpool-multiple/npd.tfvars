@@ -56,17 +56,17 @@ host_pools = [
         #}
       }
 
-      # vmExtensions = [
-      #   {
-      #     name                    = "AADLoginForWindows"
-      #     publisher               = "Microsoft.Azure.ActiveDirectory"
-      #     type                    = "AADLoginForWindows"
-      #     typeHandlerVersion      = "1.0"
-      #     autoUpgradeMinorVersion = true
-      #     enableAutomaticUpgrade  = true
-      #     settings                = {}
-      #   }
-      # ]
+      vmExtensions = [
+        {
+          name                    = "AADLoginForWindows"
+          publisher               = "Microsoft.Azure.ActiveDirectory"
+          type                    = "AADLoginForWindows"
+          typeHandlerVersion      = "1.0"
+          autoUpgradeMinorVersion = true
+          enableAutomaticUpgrade  = true
+          settings                = {}
+        }
+      ]
 
       securityInfo = {
         type              = "TrustedLaunch"
