@@ -1,8 +1,9 @@
-rg_so                                  = "rg-service-objects-npd"
-rg_pool                                = "rg-it01-pool-npd"
-hostpool_start_vm_on_connect           = true
-hostpool_validate_environment          = true
-hostpool_custom_rdp_properties         = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
+rg_so                         = "rg-service-objects-npd"
+rg_pool                       = "rg-it01-pool-npd"
+hostpool_start_vm_on_connect  = true
+hostpool_validate_environment = true
+#hostpool_custom_rdp_properties         = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
+hostpool_custom_rdp_properties         = "targetisaadjoined:i:1;audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
 key_vault_name                         = "kv-avd-itm-npd"
 workspace_name                         = "workspace-npd"
 rg_network                             = "rg-itm-network-npd"
@@ -54,6 +55,19 @@ host_pools = [
         #  mdmProviderGuid = "0000000a-0000-0000-c000-000000000000"
         #}
       }
+
+
+      vmExtensions = [
+        {
+          name                    = "AADLoginForWindows"
+          publisher               = "Microsoft.Azure.ActiveDirectory"
+          type                    = "AADLoginForWindows"
+          typeHandlerVersion      = "1.0"
+          autoUpgradeMinorVersion = true
+          enableAutomaticUpgrade  = true
+          settings                = {}
+        }
+      ]
 
       securityInfo = {
         type              = "TrustedLaunch"

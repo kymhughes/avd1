@@ -87,4 +87,43 @@ subnets = {
       }
     }
   }
-}
+  "snet-ib1-vms" = {
+    name                              = "ib1-vms"
+    address_prefixes                  = ["172.17.100.196/28"]
+    private_subnet_enabled            = true
+    private_endpoint_network_policies = "Enabled"
+    nsg = {
+      create = true
+      security_rules = {
+        "Allow-HTTPS-Inbound" = {
+          priority                   = 100
+          direction                  = "Inbound"
+          access                     = "Allow"
+          protocol                   = "Tcp"
+          source_address_prefix      = "*"
+          destination_address_prefix = "*"
+          destination_port_range     = "443"
+        }
+      }
+    }
+  }
+  "snet-ib2-tools" = {
+    name                              = "ib2-tools"
+    address_prefixes                  = ["172.17.100.224/28"]
+    private_subnet_enabled            = true
+    private_endpoint_network_policies = "Enabled"
+    nsg = {
+      create = true
+      security_rules = {
+        "Allow-HTTPS-Inbound" = {
+          priority                   = 100
+          direction                  = "Inbound"
+          access                     = "Allow"
+          protocol                   = "Tcp"
+          source_address_prefix      = "*"
+          destination_address_prefix = "*"
+          destination_port_range     = "443"
+        }
+      }
+    }
+} }
