@@ -185,8 +185,7 @@ resource "azapi_resource" "session_host_configuration" {
     azurerm_role_assignment.host_pool_mi_network_contributor,
     azurerm_role_assignment.host_pool_mi_vm_contributor,
     azurerm_role_assignment.host_pool_mi_subscription_reader,
-    azurerm_role_assignment.host_pool_mi_keyvault_secrets_user,
-    azapi_resource.session_host_management
+    azurerm_role_assignment.host_pool_mi_keyvault_secrets_user
   ]
 }
 
