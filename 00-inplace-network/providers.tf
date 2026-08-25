@@ -6,13 +6,6 @@ terraform {
       version = "~> 4.0"
     }
   }
-  # Uncomment and configure for ADO pipeline remote state
-  # backend "azurerm" {
-  #   resource_group_name  = "rg-terraform-state"
-  #   storage_account_name = "sttfstate<suffix>"
-  #   container_name       = "tfstate"
-  #   key                  = "avd/01-resource-groups.tfstate"
-  # }
 }
 
 provider "azurerm" {

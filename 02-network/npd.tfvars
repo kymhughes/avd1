@@ -11,15 +11,6 @@ subnets = {
       create = true
       security_rules = {
         "Allow-HTTPS-Inbound" = {
-          priority                   = 100
-          direction                  = "Inbound"
-          access                     = "Allow"
-          protocol                   = "Tcp"
-          source_address_prefix      = "VirtualNetwork"
-          destination_address_prefix = "*"
-          destination_port_range     = "443"
-        }
-        "Allow-HTTPS-Inbound" = {
           priority                   = 110
           direction                  = "Inbound"
           access                     = "Allow"
