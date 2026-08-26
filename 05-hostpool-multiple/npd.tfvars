@@ -77,6 +77,71 @@ host_pools = [
         managedBy   = "terraform"
       }
     }
+  },
+  {
+    name                                   = "pool-itm002"
+    resource_group_name                    = "rg-pool-itm002-npd"
+    avd_users_group                        = "avd_users_cloud"
+    app_group_name                         = "app-itm002"
+    app_group_default_desktop_display_name = "itm002"
+    scaling_plan_name                      = "sp-itm002-npd"
+    scaling_plan_friendly_name             = "ITM002 NPD Dynamic Autoscale"
+    scaling_plan_description               = "Default dynamic autoscale plan for ITM002 NPD."
+    session_host_subnet_name               = "snet-itm-002"
+    session_host_configuration = {
+      friendlyName = "ITM002 NPD session hosts"
+      vmLocation   = "australiaeast"
+      vmNamePrefix = "itm002"
+      vmSizeId     = "Standard_D2s_v5"
+
+
+
+      imageInfo = {
+        type = "Marketplace"
+        marketplaceInfo = {
+          # publisher    = "MicrosoftWindowsServer"
+          # offer        = "WindowsServer"
+          # sku          = "2022-datacenter-azure-edition"
+          # exactVersion = "20348.5499.260809"
+
+          publisher    = "MicrosoftWindowsDesktop" # Windows 11 AVD image retained for reference.
+          offer        = "windows-11"
+          sku          = "win11-25h2-avd"
+          exactVersion = "26200.9168.260809"
+        }
+      }
+
+      diskInfo = {
+        managedDisk = {
+          type = "Premium_LRS"
+        }
+      }
+
+      domainInfo = {
+        joinType = "AzureActiveDirectory"
+      }
+
+      securityInfo = {
+        type              = "TrustedLaunch"
+        secureBootEnabled = true
+        vTpmEnabled       = true
+      }
+
+      bootDiagnosticsInfo = {
+        enabled = true
+      }
+
+      vmAdminCredentials = {
+        usernameKeyVaultSecretUri = "https://kv-avd-itm-npd.vault.azure.net/secrets/vm-local-admin-username"
+        passwordKeyVaultSecretUri = "https://kv-avd-itm-npd.vault.azure.net/secrets/local-password"
+      }
+
+      vmTags = {
+        environment = "npd"
+        workload    = "avd"
+        managedBy   = "terraform"
+      }
+    }
   }
 ]
 
