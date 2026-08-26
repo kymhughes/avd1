@@ -21,7 +21,7 @@ parameters:
 
 stages:
   - stage: ${{ parameters.stageName }}
-    displayName: 'Deploy ${{ parameters.displayName }}'
+    displayName: 'Deploy ${{ parameters.stageName }}'
     condition: and(succeeded(), eq('${{ parameters.runStage }}', 'true'))
     ${{ if ne(parameters.dependsOn, '') }}:
       dependsOn: ${{ parameters.dependsOn }}
