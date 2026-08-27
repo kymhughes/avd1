@@ -105,7 +105,7 @@ locals {
       local.host_pool_defaults,
       host_pool,
       {
-        tags = merge(var.tags, coalesce(try(host_pool.tags, null), {}))
+        tags = merge(var.tags, try(host_pool.tags, {}))
 
         session_host_configuration = merge(
           {
@@ -114,17 +114,17 @@ locals {
             bootDiagnosticsInfo = var.session_host_boot_diagnostics_info
             vmAdminCredentials  = local.default_vm_admin_credentials
           },
-          coalesce(try(host_pool.session_host_configuration, null), {}),
+          try(host_pool.session_host_configuration, {}),
           {
             networkInfo = merge(
-              lookup(coalesce(try(host_pool.session_host_configuration, null), {}), "networkInfo", {}),
+              try(host_pool.session_host_configuration.networkInfo, {}),
               {
                 subnetId = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${host_pool.session_host_subnet_name}"
               }
             )
             vmTags = merge(
               var.tags,
-              lookup(coalesce(try(host_pool.session_host_configuration, null), {}), "vmTags", {})
+              try(host_pool.session_host_configuration.vmTags, {})
             )
           }
         )
