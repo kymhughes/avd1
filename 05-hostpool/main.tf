@@ -237,12 +237,11 @@ resource "azapi_resource" "session_host_configuration" {
   ]
 }
 
-resource "azapi_resource" "session_host_management" {
+resource "azapi_update_resource" "session_host_management" {
   for_each = local.host_pools
 
-  type      = "Microsoft.DesktopVirtualization/hostPools/sessionHostManagements@2026-04-01-preview"
-  name      = "default"
-  parent_id = azapi_resource.host_pool[each.key].id
+  type        = "Microsoft.DesktopVirtualization/hostPools/sessionHostManagements@2026-04-01-preview"
+  resource_id = "${azapi_resource.host_pool[each.key].id}/sessionHostManagements/default"
 
   body = {
     properties = {
@@ -405,6 +404,6 @@ resource "azapi_resource" "dynamic_scaling_plan" {
     azurerm_role_assignment.host_pool_mi_vm_contributor,
     azurerm_role_assignment.host_pool_mi_subscription_reader,
     azurerm_role_assignment.host_pool_mi_keyvault_secrets_user,
-    azapi_resource.session_host_management
+    azapi_update_resource.session_host_management
   ]
 }

@@ -163,15 +163,20 @@ resource "azurerm_resource_group_template_deployment" "aib" {
           "buildTimeoutInMinutes": 100,
   
           "vmProfile": {
-            "vmSize": "Standard_DS4_v2",
+            "vmSize": "Standard_D2s_v5",
             "osDiskSizeGB": 127
           },
   
           "source": {
+            # "type": "PlatformImage",
+            # "publisher": "microsoftwindowsdesktop",
+            # "offer": "office-365",
+            # "sku": "win11-23h2-avd-m365",
+            # "version": "latest"
             "type": "PlatformImage",
-            "publisher": "microsoftwindowsdesktop",
-            "offer": "office-365",
-            "sku": "win11-23h2-avd-m365",
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2022-datacenter-g2",
             "version": "latest"
           },
           "customize": [
