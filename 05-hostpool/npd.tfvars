@@ -10,7 +10,6 @@ enable_dynamic_scaling_plan    = true
 scaling_plan_time_zone         = "AUS Eastern Standard Time"
 scaling_plan_exclusion_tag     = "excludeFromScaling"
 hostpool_custom_rdp_properties = "targetisaadjoined:i:1;audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
-#hostpool_custom_rdp_properties         = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
 
 host_pools = [
   {
@@ -30,11 +29,6 @@ host_pools = [
       vmNamePrefix = "itm001"
       vmSizeId     = "Standard_D2s_v5"
 
-      #     publisher    = "MicrosoftWindowsDesktop"   # Windows 11 AVD image retained for reference.
-      #     offer        = "windows-11"
-      #     sku          = "win11-25h2-avd"
-      #     exactVersion = "26200.9168.260809"
-
       imageInfo = {
         type = "Marketplace"
         marketplaceInfo = {
@@ -42,6 +36,10 @@ host_pools = [
           offer        = "WindowsServer"
           sku          = "2022-datacenter-azure-edition"
           exactVersion = "20348.5499.260809"
+          # publisher    = "MicrosoftWindowsDesktop"   # Windows 11 AVD image retained for reference.
+          # offer        = "windows-11"
+          # sku          = "win11-25h2-avd"
+          # exactVersion = "26200.9168.260809"
         }
       }
 
