@@ -218,7 +218,7 @@ variable "key_vault_name" {
 
 variable "enable_private_endpoints" {
   type        = bool
-  description = "Create private endpoints for the AVD workspace feed and host pool connection."
+  description = "Create private endpoints for AVD host pool connections."
   default     = true
 }
 
@@ -232,16 +232,6 @@ variable "vnet_name" {
   description = "Spoke virtual network name."
 }
 
-variable "workspace_private_endpoint_subnet_name" {
-  type        = string
-  description = "Subnet name for the AVD workspace feed private endpoint."
-}
-
-variable "hostpool_private_endpoint_subnet_name" {
-  type        = string
-  description = "Subnet name for AVD host pool connection private endpoints."
-}
-
 variable "host_pools" {
   description = "Host pools and matching desktop application groups to create."
   type        = any
@@ -251,6 +241,12 @@ variable "host_pools" {
     condition     = can([for host_pool in var.host_pools : host_pool.name])
     error_message = "Each host_pools entry must include a name."
   }
+}
+
+variable "hostpool_private_endpoint_subnet_name" {
+  type        = string
+  description = "Fallback subnet name for AVD host pool connection private endpoints. Prefer host_pools[*].hostpool_private_endpoint_subnet_name for per-pool deployments."
+  default     = null
 }
 
 variable "enable_dynamic_scaling_plan" {

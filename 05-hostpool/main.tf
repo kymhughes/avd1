@@ -8,10 +8,6 @@
 #           The AVM typed object only supports 11 named fields and silently drops anything else.
 
 
-data "azurerm_resource_group" "service_objects" {
-  name = var.rg_so
-}
-
 data "azurerm_virtual_desktop_workspace" "this" {
   name                = var.workspace_name
   resource_group_name = coalesce(var.workspace_resource_group_name, var.rg_so)
@@ -91,6 +87,7 @@ locals {
     hostpool_validate_environment          = null
     hostpool_custom_rdp_properties         = null
     session_host_subnet_name               = null
+    hostpool_private_endpoint_subnet_name  = null
     session_host_configuration             = {}
     create_registration_token              = null
     registration_token_ttl                 = null
@@ -149,6 +146,8 @@ locals {
       hostpool_start_vm_on_connect           = var.hostpool_start_vm_on_connect
       hostpool_validate_environment          = var.hostpool_validate_environment
       hostpool_custom_rdp_properties         = var.hostpool_custom_rdp_properties
+      session_host_subnet_name               = null
+      hostpool_private_endpoint_subnet_name  = var.hostpool_private_endpoint_subnet_name
       session_host_configuration             = var.host_pool_vm_template
       create_registration_token              = var.create_registration_token
       registration_token_ttl                 = var.registration_token_ttl
@@ -304,31 +303,6 @@ resource "azurerm_virtual_desktop_workspace_application_group_association" "this
   application_group_id = azurerm_virtual_desktop_application_group.this[each.key].id
 }
 
-resource "azurerm_private_endpoint" "workspace_feed" {
-  for_each = {
-    for name in toset(["workspace"]) : name => true
-    if var.enable_private_endpoints
-  }
-
-  name                = "pe-avd-ws-feed-${var.environment}"
-  resource_group_name = data.azurerm_resource_group.service_objects.name
-  location            = var.avdLocation
-  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.workspace_private_endpoint_subnet_name}"
-  tags                = var.tags
-
-  private_service_connection {
-    name                           = "psc-avd-ws-feed-${var.environment}"
-    private_connection_resource_id = data.azurerm_virtual_desktop_workspace.this.id
-    is_manual_connection           = false
-    subresource_names              = ["feed"]
-  }
-
-  private_dns_zone_group {
-    name                 = "dns-avd-ws-feed-${var.environment}"
-    private_dns_zone_ids = [data.azurerm_private_dns_zone.avd_feed_dns.id]
-  }
-}
-
 resource "azurerm_private_endpoint" "hostpool_connection" {
   for_each = {
     for name, host_pool in local.host_pools : name => host_pool
@@ -338,7 +312,7 @@ resource "azurerm_private_endpoint" "hostpool_connection" {
   name                = "pe-avd-hp-${each.value.name}"
   resource_group_name = azurerm_resource_group.compute[each.key].name
   location            = var.avdLocation
-  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.hostpool_private_endpoint_subnet_name}"
+  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${coalesce(each.value.hostpool_private_endpoint_subnet_name, each.value.session_host_subnet_name, var.hostpool_private_endpoint_subnet_name)}"
   tags                = each.value.tags
 
   private_service_connection {
