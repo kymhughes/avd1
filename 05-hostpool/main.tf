@@ -100,7 +100,7 @@ locals {
     dynamic_scaling_plan_schedules         = null
   }
 
-  host_pools = length(var.host_pools) > 0 ? {
+  host_pools_from_var = {
     for host_pool in var.host_pools : host_pool.name => merge(
       local.host_pool_defaults,
       host_pool,
@@ -130,8 +130,12 @@ locals {
         )
       }
     )
-    } : var.hostpool_name == null || var.app_group_name == null ? {} : {
-    (var.hostpool_name) = {
+  }
+
+  legacy_host_pool_names = length(var.host_pools) == 0 && var.hostpool_name != null && var.app_group_name != null ? toset([var.hostpool_name]) : toset([])
+
+  legacy_host_pools = {
+    for hostpool_name in local.legacy_host_pool_names : hostpool_name => {
       name                                   = var.hostpool_name
       resource_group_name                    = var.rg_pool
       tags                                   = var.tags
@@ -154,6 +158,8 @@ locals {
       dynamic_scaling_plan_schedules         = var.dynamic_scaling_plan_schedules
     }
   }
+
+  host_pools = merge(local.host_pools_from_var, local.legacy_host_pools)
 }
 
 data "azuread_group" "avd_users" {
