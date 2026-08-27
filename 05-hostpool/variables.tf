@@ -244,72 +244,13 @@ variable "hostpool_private_endpoint_subnet_name" {
 
 variable "host_pools" {
   description = "Host pools and matching desktop application groups to create."
-  type = list(object({
-    name                                   = string
-    resource_group_name                    = optional(string)
-    tags                                   = optional(map(string))
-    avd_users_group                        = optional(string)
-    app_group_name                         = string
-    app_group_default_desktop_display_name = optional(string)
-    app_group_type                         = optional(string)
-    hostpool_type                          = optional(string)
-    hostpool_load_balancer_type            = optional(string)
-    hostpool_maximum_sessions_allowed      = optional(number)
-    hostpool_start_vm_on_connect           = optional(bool)
-    hostpool_validate_environment          = optional(bool)
-    hostpool_custom_rdp_properties         = optional(string)
-    session_host_subnet_name               = optional(string)
-    session_host_configuration             = optional(any)
-    create_registration_token              = optional(bool)
-    registration_token_ttl                 = optional(string)
-    scaling_plan_name                      = optional(string)
-    scaling_plan_friendly_name             = optional(string)
-    scaling_plan_description               = optional(string)
-    dynamic_scaling_plan_schedules = optional(list(object({
-      name       = string
-      daysOfWeek = list(string)
+  type        = any
+  default     = []
 
-      scalingMethod = string
-
-      createDelete = object({
-        rampUpMinimumHostPoolSize   = number
-        rampUpMaximumHostPoolSize   = number
-        rampDownMinimumHostPoolSize = number
-        rampDownMaximumHostPoolSize = number
-      })
-
-      rampUpStartTime = object({
-        hour   = number
-        minute = number
-      })
-      peakStartTime = object({
-        hour   = number
-        minute = number
-      })
-      rampDownStartTime = object({
-        hour   = number
-        minute = number
-      })
-      offPeakStartTime = object({
-        hour   = number
-        minute = number
-      })
-
-      rampUpLoadBalancingAlgorithm   = string
-      peakLoadBalancingAlgorithm     = string
-      rampDownLoadBalancingAlgorithm = string
-      offPeakLoadBalancingAlgorithm  = string
-      rampUpMinimumHostsPct          = number
-      rampUpCapacityThresholdPct     = number
-      rampDownMinimumHostsPct        = number
-      rampDownCapacityThresholdPct   = number
-      rampDownForceLogoffUsers       = bool
-      rampDownWaitTimeMinutes        = number
-      rampDownNotificationMessage    = string
-      rampDownStopHostsWhen          = string
-    })))
-  }))
-  default = []
+  validation {
+    condition     = can([for host_pool in var.host_pools : host_pool.name])
+    error_message = "Each host_pools entry must include a name."
+  }
 }
 
 variable "enable_dynamic_scaling_plan" {

@@ -78,8 +78,31 @@ locals {
     passwordKeyVaultSecretUri = "https://${var.key_vault_name}.vault.azure.net/secrets/local-password"
   })
 
+  host_pool_defaults = {
+    resource_group_name                    = null
+    tags                                   = {}
+    avd_users_group                        = null
+    app_group_default_desktop_display_name = null
+    app_group_type                         = null
+    hostpool_type                          = null
+    hostpool_load_balancer_type            = null
+    hostpool_maximum_sessions_allowed      = null
+    hostpool_start_vm_on_connect           = null
+    hostpool_validate_environment          = null
+    hostpool_custom_rdp_properties         = null
+    session_host_subnet_name               = null
+    session_host_configuration             = {}
+    create_registration_token              = null
+    registration_token_ttl                 = null
+    scaling_plan_name                      = null
+    scaling_plan_friendly_name             = null
+    scaling_plan_description               = null
+    dynamic_scaling_plan_schedules         = null
+  }
+
   host_pools = length(var.host_pools) > 0 ? {
     for host_pool in var.host_pools : host_pool.name => merge(
+      local.host_pool_defaults,
       host_pool,
       {
         tags = merge(var.tags, coalesce(try(host_pool.tags, null), {}))
