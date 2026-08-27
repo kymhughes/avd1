@@ -344,7 +344,7 @@ variable "dynamic_scaling_plan_schedules" {
       createDelete = {
         rampUpMinimumHostPoolSize   = 1
         rampUpMaximumHostPoolSize   = 2
-        rampDownMinimumHostPoolSize = 0
+        rampDownMinimumHostPoolSize = 1
         rampDownMaximumHostPoolSize = 2
       }
 
