@@ -264,8 +264,6 @@ resource "azapi_resource" "session_host_management" {
     }
   }
 
-  #added to prevent destroy of this resource when the host pool is destroyed, as it will cause issues with the session hosts being removed from the host pool
-  lifecycle { prevent_destroy = true }
   depends_on = [
     azapi_resource.session_host_configuration
   ]
