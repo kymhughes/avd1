@@ -5,13 +5,13 @@ trigger: none
 #      - main
 #  paths:
 #    include:
-#      - 05-hostpool-multiple/*
+#      - 05-hostpool/*
 pool:
   name: devopspool1
   #name: Azure Pipelines
 
 variables:
-  tfFolder: 05-hostpool-multiple
+  tfFolder: 05-hostpool
   azureServiceConnection: sp-avd-lab
   deploymentSubscriptionId: e4ea360b-bf76-47bc-bb09-81bd23faad9e
   stateSubscriptionId: eb60ae18-0772-4810-8616-c189bb571c25
