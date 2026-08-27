@@ -1,15 +1,18 @@
-rg_so                         = "rg-service-objects-npd"
-rg_pool                       = "rg-it01-pool-npd"
-hostpool_start_vm_on_connect  = true
-hostpool_validate_environment = true
-#hostpool_custom_rdp_properties         = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
-hostpool_custom_rdp_properties         = "targetisaadjoined:i:1;audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
+rg_so                                  = "rg-service-objects-npd"
+rg_pool                                = "rg-it01-pool-npd"
+hostpool_start_vm_on_connect           = true
+hostpool_validate_environment          = true
 key_vault_name                         = "kv-avd-itm-npd"
 workspace_name                         = "workspace-npd"
 rg_network                             = "rg-itm-network-npd"
 vnet_name                              = "vnet-itm-vnet-npd"
 workspace_private_endpoint_subnet_name = "snet-general-pe"
 hostpool_private_endpoint_subnet_name  = "snet-general-pe"
+enable_dynamic_scaling_plan            = true
+scaling_plan_time_zone                 = "AUS Eastern Standard Time"
+scaling_plan_exclusion_tag             = "excludeFromScaling"
+hostpool_custom_rdp_properties         = "targetisaadjoined:i:1;audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
+#hostpool_custom_rdp_properties         = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
 
 host_pools = [
   {
@@ -43,12 +46,6 @@ host_pools = [
         }
       }
 
-      diskInfo = {
-        managedDisk = {
-          type = "Premium_LRS"
-        }
-      }
-
       domainInfo = {
         joinType = "AzureActiveDirectory"
         #azureActiveDirectoryInfo = {       #Not applicable for server 2022
@@ -56,25 +53,9 @@ host_pools = [
         #}
       }
 
-      securityInfo = {
-        type              = "TrustedLaunch"
-        secureBootEnabled = true
-        vTpmEnabled       = true
-      }
-
-      bootDiagnosticsInfo = {
-        enabled = true
-      }
-
-      vmAdminCredentials = {
-        usernameKeyVaultSecretUri = "https://kv-avd-itm-npd.vault.azure.net/secrets/vm-local-admin-username"
-        passwordKeyVaultSecretUri = "https://kv-avd-itm-npd.vault.azure.net/secrets/local-password"
-      }
-
       vmTags = {
         environment = "npd"
-        workload    = "avd"
-        managedBy   = "terraform"
+        workload    = "avd001"
       }
     }
   },
@@ -94,8 +75,6 @@ host_pools = [
       vmNamePrefix = "itm002"
       vmSizeId     = "Standard_D2s_v5"
 
-
-
       imageInfo = {
         type = "Marketplace"
         marketplaceInfo = {
@@ -111,88 +90,20 @@ host_pools = [
         }
       }
 
-      diskInfo = {
-        managedDisk = {
-          type = "Premium_LRS"
-        }
-      }
-
       domainInfo = {
         joinType = "AzureActiveDirectory"
-      }
-
-      securityInfo = {
-        type              = "TrustedLaunch"
-        secureBootEnabled = true
-        vTpmEnabled       = true
-      }
-
-      bootDiagnosticsInfo = {
-        enabled = true
-      }
-
-      vmAdminCredentials = {
-        usernameKeyVaultSecretUri = "https://kv-avd-itm-npd.vault.azure.net/secrets/vm-local-admin-username"
-        passwordKeyVaultSecretUri = "https://kv-avd-itm-npd.vault.azure.net/secrets/local-password"
+        azureActiveDirectoryInfo = { #Not applicable for server 2022
+          mdmProviderGuid = "0000000a-0000-0000-c000-000000000000"
+        }
       }
 
       vmTags = {
         environment = "npd"
-        workload    = "avd"
-        managedBy   = "terraform"
+        workload    = "avd002"
       }
     }
   }
 ]
 
 
-enable_dynamic_scaling_plan = true
-scaling_plan_time_zone      = "AUS Eastern Standard Time"
-scaling_plan_exclusion_tag  = "excludeFromScaling"
-dynamic_scaling_plan_schedules = [
-  {
-    name       = "Weekdays"
-    daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
-    scalingMethod = "CreateDeletePowerManage"
-
-    createDelete = {
-      rampUpMinimumHostPoolSize   = 1 #	Don’t pre-create hosts before demand.
-      rampUpMaximumHostPoolSize   = 2 # Never scale above 2 hosts during ramp-up.
-      rampDownMinimumHostPoolSize = 0 # Allow scale-down to zero.
-      rampDownMaximumHostPoolSize = 2 # Keep the max at 2 during ramp-down too.
-    }
-
-    rampUpStartTime = {
-      hour   = 7
-      minute = 0
-    }
-    peakStartTime = {
-      hour   = 9
-      minute = 0
-    }
-    rampDownStartTime = {
-      hour   = 18
-      minute = 0
-    }
-    offPeakStartTime = {
-      hour   = 19
-      minute = 0
-    }
-
-    rampUpLoadBalancingAlgorithm   = "BreadthFirst"
-    peakLoadBalancingAlgorithm     = "BreadthFirst"
-    rampDownLoadBalancingAlgorithm = "DepthFirst"
-    offPeakLoadBalancingAlgorithm  = "DepthFirst"
-
-    rampUpMinimumHostsPct        = 00 # Don’t keep any hosts on just for baseline.
-    rampUpCapacityThresholdPct   = 90 # Only scale up when existing capacity is nearly full.
-    rampDownMinimumHostsPct      = 0
-    rampDownCapacityThresholdPct = 90
-
-    rampDownForceLogoffUsers    = false
-    rampDownWaitTimeMinutes     = 45
-    rampDownNotificationMessage = "Please save your work. Your session may be disconnected soon."
-    rampDownStopHostsWhen       = "ZeroActiveSessions"
-  }
-]

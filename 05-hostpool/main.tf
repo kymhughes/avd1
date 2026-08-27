@@ -73,18 +73,35 @@ resource "azurerm_role_assignment" "host_pool_mi_keyvault_secrets_user" {
 
 
 locals {
+  default_vm_admin_credentials = coalesce(var.session_host_vm_admin_credentials, {
+    usernameKeyVaultSecretUri = "https://${var.key_vault_name}.vault.azure.net/secrets/vm-local-admin-username"
+    passwordKeyVaultSecretUri = "https://${var.key_vault_name}.vault.azure.net/secrets/local-password"
+  })
+
   host_pools = length(var.host_pools) > 0 ? {
     for host_pool in var.host_pools : host_pool.name => merge(
       host_pool,
       {
+        tags = merge(var.tags, coalesce(try(host_pool.tags, null), {}))
+
         session_host_configuration = merge(
-          host_pool.session_host_configuration,
+          {
+            diskInfo            = var.session_host_disk_info
+            securityInfo        = var.session_host_security_info
+            bootDiagnosticsInfo = var.session_host_boot_diagnostics_info
+            vmAdminCredentials  = local.default_vm_admin_credentials
+          },
+          coalesce(try(host_pool.session_host_configuration, null), {}),
           {
             networkInfo = merge(
-              lookup(host_pool.session_host_configuration, "networkInfo", {}),
+              lookup(coalesce(try(host_pool.session_host_configuration, null), {}), "networkInfo", {}),
               {
                 subnetId = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${host_pool.session_host_subnet_name}"
               }
+            )
+            vmTags = merge(
+              var.tags,
+              lookup(coalesce(try(host_pool.session_host_configuration, null), {}), "vmTags", {})
             )
           }
         )
@@ -94,6 +111,7 @@ locals {
     (var.hostpool_name) = {
       name                                   = var.hostpool_name
       resource_group_name                    = var.rg_pool
+      tags                                   = var.tags
       avd_users_group                        = var.avd_users_group
       app_group_name                         = var.app_group_name
       app_group_default_desktop_display_name = var.app_group_default_desktop_display_name
@@ -110,6 +128,7 @@ locals {
       scaling_plan_name                      = var.scaling_plan_name
       scaling_plan_friendly_name             = var.scaling_plan_friendly_name
       scaling_plan_description               = var.scaling_plan_description
+      dynamic_scaling_plan_schedules         = var.dynamic_scaling_plan_schedules
     }
   }
 }
@@ -126,7 +145,7 @@ resource "azurerm_resource_group" "compute" {
 
   location = var.avdLocation
   name     = coalesce(each.value.resource_group_name, "rg-${each.value.name}-${var.environment}")
-  tags     = var.tags
+  tags     = each.value.tags
   lifecycle { prevent_destroy = false }
 }
 
@@ -137,7 +156,7 @@ resource "azapi_resource" "host_pool" {
   name      = each.value.name
   location  = var.avdLocation
   parent_id = azurerm_resource_group.compute[each.key].id
-  tags      = var.tags
+  tags      = each.value.tags
 
   identity {
     type = "SystemAssigned"
@@ -233,7 +252,7 @@ resource "azurerm_virtual_desktop_application_group" "this" {
   type                         = coalesce(each.value.app_group_type, var.app_group_type)
   host_pool_id                 = azapi_resource.host_pool[each.key].id
   default_desktop_display_name = coalesce(each.value.app_group_default_desktop_display_name, var.app_group_default_desktop_display_name)
-  tags                         = var.tags
+  tags                         = each.value.tags
 }
 
 resource "azurerm_role_assignment" "avd_users" {
@@ -288,7 +307,7 @@ resource "azurerm_private_endpoint" "hostpool_connection" {
   resource_group_name = azurerm_resource_group.compute[each.key].name
   location            = var.avdLocation
   subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.hostpool_private_endpoint_subnet_name}"
-  tags                = var.tags
+  tags                = each.value.tags
 
   private_service_connection {
     name                           = "psc-avd-hp-${each.value.name}"
@@ -316,7 +335,7 @@ resource "azapi_resource" "dynamic_scaling_plan" {
   name      = coalesce(each.value.scaling_plan_name, var.scaling_plan_name, "sp-${each.value.name}")
   location  = var.avdLocation
   parent_id = azurerm_resource_group.compute[each.key].id
-  tags      = var.tags
+  tags      = each.value.tags
 
   body = {
     properties = merge(
@@ -333,7 +352,7 @@ resource "azapi_resource" "dynamic_scaling_plan" {
           }
         ]
 
-        schedules = var.dynamic_scaling_plan_schedules
+        schedules = coalesce(each.value.dynamic_scaling_plan_schedules, var.dynamic_scaling_plan_schedules)
       },
       var.scaling_plan_exclusion_tag == null ? {} : {
         exclusionTag = var.scaling_plan_exclusion_tag
@@ -341,9 +360,9 @@ resource "azapi_resource" "dynamic_scaling_plan" {
     )
   }
 
-  # lifecycle {
-  #   ignore_changes = [body]
-  # }
+  lifecycle {
+    ignore_changes = [body]
+  }
 
   depends_on = [
     azurerm_role_assignment.host_pool_mi_network_contributor,

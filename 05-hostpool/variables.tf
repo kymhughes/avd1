@@ -106,6 +106,40 @@ variable "host_pool_vm_template" {
   default     = null
 }
 
+variable "session_host_disk_info" {
+  type        = any
+  description = "Default diskInfo block for automated session host configurations. Individual host pools can override this in session_host_configuration.diskInfo."
+  default = {
+    managedDisk = {
+      type = "Premium_LRS"
+    }
+  }
+}
+
+variable "session_host_security_info" {
+  type        = any
+  description = "Default securityInfo block for automated session host configurations. Individual host pools can override this in session_host_configuration.securityInfo."
+  default = {
+    type              = "TrustedLaunch"
+    secureBootEnabled = true
+    vTpmEnabled       = true
+  }
+}
+
+variable "session_host_boot_diagnostics_info" {
+  type        = any
+  description = "Default bootDiagnosticsInfo block for automated session host configurations. Individual host pools can override this in session_host_configuration.bootDiagnosticsInfo."
+  default = {
+    enabled = true
+  }
+}
+
+variable "session_host_vm_admin_credentials" {
+  type        = any
+  description = "Default vmAdminCredentials block for automated session host configurations. When null, secret URIs are built from key_vault_name. Individual host pools can override this in session_host_configuration.vmAdminCredentials."
+  default     = null
+}
+
 variable "scheduled_agent_updates" {
   description = "Optional scheduled AVD agent update configuration."
   type = object({
@@ -213,6 +247,7 @@ variable "host_pools" {
   type = list(object({
     name                                   = string
     resource_group_name                    = optional(string)
+    tags                                   = optional(map(string))
     avd_users_group                        = optional(string)
     app_group_name                         = string
     app_group_default_desktop_display_name = optional(string)
@@ -230,6 +265,49 @@ variable "host_pools" {
     scaling_plan_name                      = optional(string)
     scaling_plan_friendly_name             = optional(string)
     scaling_plan_description               = optional(string)
+    dynamic_scaling_plan_schedules = optional(list(object({
+      name       = string
+      daysOfWeek = list(string)
+
+      scalingMethod = string
+
+      createDelete = object({
+        rampUpMinimumHostPoolSize   = number
+        rampUpMaximumHostPoolSize   = number
+        rampDownMinimumHostPoolSize = number
+        rampDownMaximumHostPoolSize = number
+      })
+
+      rampUpStartTime = object({
+        hour   = number
+        minute = number
+      })
+      peakStartTime = object({
+        hour   = number
+        minute = number
+      })
+      rampDownStartTime = object({
+        hour   = number
+        minute = number
+      })
+      offPeakStartTime = object({
+        hour   = number
+        minute = number
+      })
+
+      rampUpLoadBalancingAlgorithm   = string
+      peakLoadBalancingAlgorithm     = string
+      rampDownLoadBalancingAlgorithm = string
+      offPeakLoadBalancingAlgorithm  = string
+      rampUpMinimumHostsPct          = number
+      rampUpCapacityThresholdPct     = number
+      rampDownMinimumHostsPct        = number
+      rampDownCapacityThresholdPct   = number
+      rampDownForceLogoffUsers       = bool
+      rampDownWaitTimeMinutes        = number
+      rampDownNotificationMessage    = string
+      rampDownStopHostsWhen          = string
+    })))
   }))
   default = []
 }
@@ -271,7 +349,7 @@ variable "scaling_plan_exclusion_tag" {
 }
 
 variable "dynamic_scaling_plan_schedules" {
-  description = "Default dynamic autoscale schedules. Created by Terraform, then ignored so operators can tune schedules later."
+  description = "Default dynamic autoscale schedules. Individual host pools can override this with dynamic_scaling_plan_schedules."
   type = list(object({
     name       = string
     daysOfWeek = list(string)
@@ -315,5 +393,49 @@ variable "dynamic_scaling_plan_schedules" {
     rampDownNotificationMessage    = string
     rampDownStopHostsWhen          = string
   }))
-  default = []
+  default = [
+    {
+      name       = "Weekdays"
+      daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+
+      scalingMethod = "CreateDeletePowerManage"
+
+      createDelete = {
+        rampUpMinimumHostPoolSize   = 1
+        rampUpMaximumHostPoolSize   = 2
+        rampDownMinimumHostPoolSize = 0
+        rampDownMaximumHostPoolSize = 2
+      }
+
+      rampUpStartTime = {
+        hour   = 7
+        minute = 0
+      }
+      peakStartTime = {
+        hour   = 9
+        minute = 0
+      }
+      rampDownStartTime = {
+        hour   = 18
+        minute = 0
+      }
+      offPeakStartTime = {
+        hour   = 19
+        minute = 0
+      }
+
+      rampUpLoadBalancingAlgorithm   = "BreadthFirst"
+      peakLoadBalancingAlgorithm     = "BreadthFirst"
+      rampDownLoadBalancingAlgorithm = "DepthFirst"
+      offPeakLoadBalancingAlgorithm  = "DepthFirst"
+      rampUpMinimumHostsPct          = 0
+      rampUpCapacityThresholdPct     = 90
+      rampDownMinimumHostsPct        = 0
+      rampDownCapacityThresholdPct   = 90
+      rampDownForceLogoffUsers       = false
+      rampDownWaitTimeMinutes        = 45
+      rampDownNotificationMessage    = "Please save your work. Your session may be disconnected soon."
+      rampDownStopHostsWhen          = "ZeroActiveSessions"
+    }
+  ]
 }
