@@ -1,0 +1,9 @@
+- task: AzureCLI@2
+  inputs:
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      az vm generalize \
+        --resource-group $(rg) \
+        --name avd-ref-01
+        

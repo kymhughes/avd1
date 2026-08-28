@@ -1,0 +1,29 @@
+Pipeline 1
+------------
+Deploy VM
+from hardened image
+
+Manual step
+------------
+Install difficult application
+Validate
+
+Pipeline 2
+------------
+Snapshot VM
+Create clone
+
+Sysprep clone
+Generalize clone
+Publish SIG image
+
+Pipeline 3
+------------
+AIB monthly patching
+Update image version
+
+Pipeline 4
+------------
+Deploy pilot AVD host
+Smoke test
+Promote image

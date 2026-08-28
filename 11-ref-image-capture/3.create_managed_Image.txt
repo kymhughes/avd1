@@ -1,0 +1,5 @@
+az image create \
+  --resource-group rg-image \
+  --name avd-image-v1 \
+  --source avd-ref-01
+
