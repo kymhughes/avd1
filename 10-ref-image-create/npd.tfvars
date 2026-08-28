@@ -16,7 +16,7 @@ admin_password = "P@ssw0rd123123"
 # Leave empty if you only want to stage prerequisites first.
 avd_registration_token = ""
 
-install_fslogix = true
+install_fslogix = false
 
 # Example for Azure Files profiles:
 # fslogix_profile_container_unc_path = "\\\\mystorageaccount.file.core.windows.net\\profiles"
