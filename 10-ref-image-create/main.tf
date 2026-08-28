@@ -1,5 +1,16 @@
 locals {
   bootstrap_script = <<-POWERSHELL
+    param(
+      [string]$AvdRegistrationToken,
+      [bool]$InstallFslogix,
+      [string]$FslogixProfileContainerPath,
+      [string]$CustomAppBlobUrl,
+      [string]$CustomAppFileName,
+      [string]$CustomAppInstallCommand,
+      [string]$CustomAppExpectedSha256,
+      [bool]$RebootAfterBootstrap
+    )
+
     $ErrorActionPreference = 'Stop'
     $ProgressPreference = 'SilentlyContinue'
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -7,15 +18,6 @@ locals {
     $WorkDir = 'C:\AVDPrep'
     New-Item -Path $WorkDir -ItemType Directory -Force | Out-Null
     Start-Transcript -Path (Join-Path $WorkDir 'bootstrap.log') -Append
-
-    $AvdRegistrationToken = ${jsonencode(var.avd_registration_token)}
-    $InstallFslogix = [System.Convert]::ToBoolean('${var.install_fslogix}')
-    $FslogixProfileContainerPath = ${jsonencode(var.fslogix_profile_container_unc_path)}
-    $CustomAppBlobUrl = ${jsonencode(var.custom_app_blob_url)}
-    $CustomAppFileName = ${jsonencode(var.custom_app_file_name)}
-    $CustomAppInstallCommand = ${jsonencode(var.custom_app_install_command)}
-    $CustomAppExpectedSha256 = ${jsonencode(var.custom_app_expected_sha256)}
-    $RebootAfterBootstrap = [System.Convert]::ToBoolean('${var.reboot_after_bootstrap}')
 
     function Invoke-Download {
       param(
@@ -225,17 +227,54 @@ resource "azurerm_windows_virtual_machine" "this" {
   tags = var.tags
 }
 
-resource "azurerm_virtual_machine_extension" "avd_bootstrap" {
-  name                       = "avd-bootstrap"
-  virtual_machine_id         = azurerm_windows_virtual_machine.this.id
-  publisher                  = "Microsoft.Compute"
-  type                       = "CustomScriptExtension"
-  type_handler_version       = "1.10"
-  auto_upgrade_minor_version = true
+resource "azurerm_virtual_machine_run_command" "avd_bootstrap" {
+  name               = "avd-bootstrap"
+  location           = azurerm_resource_group.this.location
+  virtual_machine_id = azurerm_windows_virtual_machine.this.id
 
-  protected_settings = jsonencode({
-    script = base64encode(local.bootstrap_script)
-  })
+  source {
+    script = local.bootstrap_script
+  }
+
+  parameter {
+    name  = "InstallFslogix"
+    value = tostring(var.install_fslogix)
+  }
+
+  parameter {
+    name  = "FslogixProfileContainerPath"
+    value = var.fslogix_profile_container_unc_path
+  }
+
+  parameter {
+    name  = "CustomAppFileName"
+    value = var.custom_app_file_name
+  }
+
+  parameter {
+    name  = "CustomAppExpectedSha256"
+    value = var.custom_app_expected_sha256
+  }
+
+  parameter {
+    name  = "RebootAfterBootstrap"
+    value = tostring(var.reboot_after_bootstrap)
+  }
+
+  protected_parameter {
+    name  = "AvdRegistrationToken"
+    value = var.avd_registration_token
+  }
+
+  protected_parameter {
+    name  = "CustomAppBlobUrl"
+    value = var.custom_app_blob_url
+  }
+
+  protected_parameter {
+    name  = "CustomAppInstallCommand"
+    value = var.custom_app_install_command
+  }
 
   tags = var.tags
 }

@@ -6,7 +6,7 @@ It includes:
 
 1. A resource group, NIC, and Windows Server 2022 VM attached to an existing subnet.
 2. Azure platform patch orchestration via `AutomaticByPlatform`.
-3. An initial Windows Update pass during bootstrap.
+3. An initial Windows Update pass during bootstrap using Azure VM Run Command.
 4. FSLogix installation and optional profile-container registry configuration.
 5. Optional AVD agent and bootloader installation using a host pool registration token.
 6. Optional custom application download and installation from a blob URL, usually a SAS-protected installer.
@@ -59,3 +59,5 @@ custom_app_install_command = "{file} /quiet /norestart"
 ## Production notes
 
 This example does not create or attach an NSG and does not create a public IP address. Apply subnet security, routing, DNS, private connectivity, Azure Bastion, or JIT access through your existing network design. Domain join, Entra ID join, Azure Files identity/RBAC, host pool creation, and image management are environment-specific and should be layered in according to your AVD design.
+
+Bootstrap is implemented with `azurerm_virtual_machine_run_command` rather than the Windows Custom Script Extension. This avoids Windows command-line length limits and keeps the AVD registration token, app blob URL, and app install command in protected Run Command parameters.
