@@ -4,13 +4,13 @@ locals {
   bootstrap_script = <<-POWERSHELL
     param(
       [string]$AvdRegistrationToken,
-      [bool]$InstallFslogix,
+      [string]$InstallFslogix,
       [string]$FslogixProfileContainerPath,
       [string]$CustomAppBlobUrl,
       [string]$CustomAppFileName,
       [string]$CustomAppInstallCommand,
       [string]$CustomAppExpectedSha256,
-      [bool]$RebootAfterBootstrap
+      [string]$RebootAfterBootstrap
     )
 
     $ErrorActionPreference = 'Stop'
@@ -27,6 +27,8 @@ locals {
         Set-Variable -Name $name -Value ''
       }
     }
+    $InstallFslogix = [System.Convert]::ToBoolean($InstallFslogix)
+    $RebootAfterBootstrap = [System.Convert]::ToBoolean($RebootAfterBootstrap)
 
     function Invoke-Download {
       param(
