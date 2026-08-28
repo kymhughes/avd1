@@ -234,7 +234,7 @@ resource "azurerm_virtual_machine_extension" "avd_bootstrap" {
   auto_upgrade_minor_version = true
 
   protected_settings = jsonencode({
-    commandToExecute = "powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${textencodebase64(local.bootstrap_script, "UTF-16LE")}"
+    script = base64encode(local.bootstrap_script)
   })
 
   tags = var.tags
