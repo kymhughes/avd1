@@ -1,4 +1,6 @@
 locals {
+  empty_parameter_sentinel = "__terraform_empty_parameter__"
+
   bootstrap_script = <<-POWERSHELL
     param(
       [string]$AvdRegistrationToken,
@@ -18,6 +20,13 @@ locals {
     $WorkDir = 'C:\AVDPrep'
     New-Item -Path $WorkDir -ItemType Directory -Force | Out-Null
     Start-Transcript -Path (Join-Path $WorkDir 'bootstrap.log') -Append
+
+    $EmptyParameterSentinel = '${local.empty_parameter_sentinel}'
+    foreach ($name in @('AvdRegistrationToken', 'FslogixProfileContainerPath', 'CustomAppBlobUrl', 'CustomAppFileName', 'CustomAppInstallCommand', 'CustomAppExpectedSha256')) {
+      if ((Get-Variable -Name $name -ValueOnly) -eq $EmptyParameterSentinel) {
+        Set-Variable -Name $name -Value ''
+      }
+    }
 
     function Invoke-Download {
       param(
@@ -243,7 +252,7 @@ resource "azurerm_virtual_machine_run_command" "avd_bootstrap" {
 
   parameter {
     name  = "FslogixProfileContainerPath"
-    value = var.fslogix_profile_container_unc_path
+    value = var.fslogix_profile_container_unc_path != "" ? var.fslogix_profile_container_unc_path : local.empty_parameter_sentinel
   }
 
   parameter {
@@ -253,7 +262,7 @@ resource "azurerm_virtual_machine_run_command" "avd_bootstrap" {
 
   parameter {
     name  = "CustomAppExpectedSha256"
-    value = var.custom_app_expected_sha256
+    value = var.custom_app_expected_sha256 != "" ? var.custom_app_expected_sha256 : local.empty_parameter_sentinel
   }
 
   parameter {
@@ -263,17 +272,17 @@ resource "azurerm_virtual_machine_run_command" "avd_bootstrap" {
 
   protected_parameter {
     name  = "AvdRegistrationToken"
-    value = var.avd_registration_token
+    value = var.avd_registration_token != "" ? var.avd_registration_token : local.empty_parameter_sentinel
   }
 
   protected_parameter {
     name  = "CustomAppBlobUrl"
-    value = var.custom_app_blob_url
+    value = var.custom_app_blob_url != "" ? var.custom_app_blob_url : local.empty_parameter_sentinel
   }
 
   protected_parameter {
     name  = "CustomAppInstallCommand"
-    value = var.custom_app_install_command
+    value = var.custom_app_install_command != "" ? var.custom_app_install_command : local.empty_parameter_sentinel
   }
 
   tags = var.tags
