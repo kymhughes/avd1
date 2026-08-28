@@ -12,4 +12,3 @@ resource "azurerm_shared_image_version" "capture" {
     regional_replica_count = 2
   }
 }
-``
