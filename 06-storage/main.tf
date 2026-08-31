@@ -1,259 +1,35 @@
-# ── FSLogix Storage — Premium FileStorage, AADKERB, Private Endpoint ──────────
-# Depends on: 01-resource-groups (rg_storage_name), 02-network (pesubnet_id, vnet_id)
-#
-# Security posture:
-#   - shared_access_key_enabled       = false  (Entra-only auth)
-#   - public_network_access_enabled   = false  (private endpoint only)
-#   - AADKERB authentication for FSLogix Kerberos tickets
+# ── Storage Accounts — parent orchestration ───────────────────────────────────
+# One child module instance owns one storage account and its shares/RBAC.
 
-# Entra Kerberos Reg Key
-# reg add HKLM\SYSTEM\CurrentControlSet\Control\Lsa\Kerberos\Parameters /v CloudKerberosTicketRetrievalEnabled /t REG_DWORD /d 1
-
-locals {
-  storage_accounts_with_private_link_identifier_uris = {
-    for storage_key, storage in var.storage_accounts : storage_key => storage
-    if var.manage_private_link_identifier_uris && storage.identity_auth_directory_service == "AADKERB"
-  }
-
-  private_link_identifier_uri_assignments = {
-    for assignment in flatten([
-      for storage_key, storage in local.storage_accounts_with_private_link_identifier_uris : [
-        for identifier_uri in [
-          "api://${var.tenant_id}/HOST/${storage.name}.privatelink.file.core.windows.net",
-          "api://${var.tenant_id}/CIFS/${storage.name}.privatelink.file.core.windows.net",
-          "api://${var.tenant_id}/HTTP/${storage.name}.privatelink.file.core.windows.net",
-          "HOST/${storage.name}.privatelink.file.core.windows.net",
-          "CIFS/${storage.name}.privatelink.file.core.windows.net",
-          "HTTP/${storage.name}.privatelink.file.core.windows.net"
-          ] : {
-          resource_key   = "${storage_key}.${replace(replace(identifier_uri, "/", "_"), ":", "_")}"
-          storage_key    = storage_key
-          identifier_uri = identifier_uri
-        }
-      ]
-    ]) : assignment.resource_key => assignment
-  }
-
-  shares = {
-    for share in flatten([
-      for storage_key, storage in var.storage_accounts : [
-        for share_key, share in storage.shares : {
-          resource_key         = "${storage_key}.${share_key}"
-          storage_key          = storage_key
-          share_key            = share_key
-          name                 = share.name
-          quota_gb             = share.quota_gb
-          smb_role_assignments = share.smb_role_assignments
-          smb_admin_groups     = share.smb_admin_groups
-        }
-      ]
-    ]) : share.resource_key => share
-  }
-
-  share_rbac_assignments = {
-    for assignment in flatten([
-      for share_resource_key, share in local.shares : [
-        for assignment_key, assignment in share.smb_role_assignments : {
-          resource_key         = "${share_resource_key}.${assignment_key}"
-          share_resource_key   = share_resource_key
-          storage_key          = share.storage_key
-          share_name           = share.name
-          group_name           = assignment.group_name
-          role_definition_name = assignment.role_definition_name
-        }
-      ]
-    ]) : assignment.resource_key => assignment
-  }
-
-  share_smb_admin_assignments = {
-    for assignment in flatten([
-      for share_resource_key, share in local.shares : [
-        for group_name in share.smb_admin_groups : {
-          resource_key       = "${share_resource_key}.${group_name}"
-          share_resource_key = share_resource_key
-          storage_key        = share.storage_key
-          share_name         = share.name
-          group_name         = group_name
-        }
-      ]
-    ]) : assignment.resource_key => assignment
-  }
-
-  rbac_group_names = toset(concat(
-    [for assignment in values(local.share_rbac_assignments) : assignment.group_name],
-    [for assignment in values(local.share_smb_admin_assignments) : assignment.group_name]
-  ))
-}
-
-data "azuread_group" "rbac_groups" {
-  for_each = local.rbac_group_names
-
-  display_name     = each.key
-  security_enabled = true
-}
-
-data "azuread_application" "storage_account" {
-  for_each = local.storage_accounts_with_private_link_identifier_uris
-
-  display_name = "[Storage Account] ${each.value.name}.file.core.windows.net"
-
-  depends_on = [
-    azapi_resource.storage_account
-  ]
-}
-
-# ── User-Assigned Managed Identity ───────────────────────────────────────────
-resource "azurerm_user_assigned_identity" "storage_mi" {
-  for_each = var.storage_accounts
-
-  provider            = azurerm.spoke
-  name                = each.value.managed_identity_name
-  resource_group_name = var.rg_storage_name
-  location            = var.avdLocation
-  tags                = var.tags
-}
-
-# ── FSLogix Storage Account ───────────────────────────────────────────────────
-resource "azapi_resource" "storage_account" {
-  for_each = var.storage_accounts
-
-  type      = "Microsoft.Storage/storageAccounts@2023-05-01"
-  name      = each.value.name
-  parent_id = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_storage_name}"
-  location  = var.avdLocation
-  tags      = var.tags
-
-  identity {
-    type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.storage_mi[each.key].id]
-  }
-
-  body = {
-    kind = each.value.kind
-    sku = {
-      name = each.value.sku_name
-    }
-    properties = {
-      allowSharedKeyAccess     = false
-      publicNetworkAccess      = "Disabled"
-      minimumTlsVersion        = "TLS1_2"
-      supportsHttpsTrafficOnly = true
-
-      azureFilesIdentityBasedAuthentication = merge(
-        {
-          directoryServiceOptions = each.value.identity_auth_directory_service
-        },
-        var.active_directory_domain_name != null && var.active_directory_domain_guid != null ? {
-          activeDirectoryProperties = {
-            domainName = var.active_directory_domain_name
-            domainGuid = var.active_directory_domain_guid
-          }
-        } : {}
-      )
-    }
-  }
-
-  lifecycle {
-    prevent_destroy = false
-  }
-}
-
-# ── Private-link Kerberos identifier URIs ─────────────────────────────────────
-# Required when clients access Azure Files over private endpoint with Entra Kerberos.
-resource "azuread_application_identifier_uri" "storage_private_link" {
-  for_each = local.private_link_identifier_uri_assignments
-
-  application_id = data.azuread_application.storage_account[each.value.storage_key].id
-  identifier_uri = each.value.identifier_uri
-}
-
-# ── Azure Files Shares ────────────────────────────────────────────────────────
-resource "azapi_resource" "shares" {
-  for_each = local.shares
-
-  type      = "Microsoft.Storage/storageAccounts/fileServices/shares@2023-05-01"
-  name      = each.value.name
-  parent_id = "${azapi_resource.storage_account[each.value.storage_key].id}/fileServices/default"
-
-  body = {
-    properties = {
-      shareQuota       = each.value.quota_gb
-      enabledProtocols = "SMB"
-    }
-  }
-}
-
-# ── Private DNS Zone for Files (pre-existing in hub) ─────────────────────
 data "azurerm_private_dns_zone" "file_dns" {
   provider            = azurerm.hub
   name                = "privatelink.file.core.windows.net"
   resource_group_name = var.hub_dns_zone_rg
 }
 
-
-# ── Private Endpoint ──────────────────────────────────────────────────────────
-resource "azurerm_private_endpoint" "file_pe" {
+module "storage_account" {
   for_each = var.storage_accounts
 
-  provider            = azurerm.spoke
-  name                = each.value.private_endpoint_name
-  resource_group_name = var.rg_storage_name
-  location            = var.avdLocation
-  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_files}"
-  tags                = var.tags
+  source = "./modules/storage-account"
 
-  private_service_connection {
-    name                           = each.value.private_service_connection_name
-    private_connection_resource_id = azapi_resource.storage_account[each.key].id
-    is_manual_connection           = false
-    subresource_names              = ["file"]
+  providers = {
+    azurerm.spoke = azurerm.spoke
+    azapi         = azapi
+    azuread       = azuread
   }
 
-  private_dns_zone_group {
-    name                 = each.value.private_dns_zone_group_name
-    private_dns_zone_ids = [data.azurerm_private_dns_zone.file_dns.id]
-  }
+  storage_key     = each.key
+  storage_account = each.value
 
-  depends_on = [azapi_resource.storage_account]
-}
+  avdLocation           = var.avdLocation
+  spoke_subscription_id = var.spoke_subscription_id
+  rg_storage_name       = var.rg_storage_name
+  rg_network            = var.rg_network
+  vnet_name             = var.vnet_name
+  pesubnet_files        = var.pesubnet_files
+  private_dns_zone_id   = data.azurerm_private_dns_zone.file_dns.id
+  tags                  = var.tags
 
-# ── Network Rules — deny all except PE subnet ─────────────────────────────────
-resource "azurerm_storage_account_network_rules" "fslogix_rules" {
-  for_each = var.storage_accounts
-
-  provider           = azurerm.spoke
-  storage_account_id = azapi_resource.storage_account[each.key].id
-  default_action     = "Deny"
-  bypass             = ["AzureServices"]
-  depends_on         = [azurerm_private_endpoint.file_pe]
-}
-
-# ── Share-level SMB RBAC ──────────────────────────────────────────────────────
-resource "azurerm_role_assignment" "share_smb" {
-  for_each = local.share_rbac_assignments
-
-  provider             = azurerm.spoke
-  scope                = azapi_resource.shares[each.value.share_resource_key].id
-  role_definition_name = each.value.role_definition_name
-  principal_id         = data.azuread_group.rbac_groups[each.value.group_name].object_id
-
-  depends_on = [
-    azapi_resource.shares
-  ]
-}
-
-# ── Storage File Data SMB Admin for ACL administrators ────────────────────────
-# This is intentionally separate from normal share access because it allows
-# ownership and ACL administration over SMB.
-resource "azurerm_role_assignment" "share_smb_admin" {
-  for_each = local.share_smb_admin_assignments
-
-  provider             = azurerm.spoke
-  scope                = azapi_resource.shares[each.value.share_resource_key].id
-  role_definition_name = "Storage File Data SMB Admin"
-  principal_id         = data.azuread_group.rbac_groups[each.value.group_name].object_id
-
-  depends_on = [
-    azapi_resource.shares
-  ]
+  active_directory_domain_name = var.active_directory_domain_name
+  active_directory_domain_guid = var.active_directory_domain_guid
 }

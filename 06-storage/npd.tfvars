@@ -5,20 +5,17 @@ vnet_name       = "vnet-itm-vnet-npd"
 pesubnet_files  = "snet-general-pe"
 
 # Optional hybrid Microsoft Entra Kerberos AD metadata, applied to all storage accounts.
-# active_directory_domain_name = "contoso.local"
-# active_directory_domain_guid = "00000000-0000-0000-0000-000000000000"
-
-# Admin-hat option: add private-link Kerberos identifier URIs to each storage
-# account Entra app. Requires Graph application read/write permissions.
-# manage_private_link_identifier_uris = true
+active_directory_domain_name = "int.local"
+active_directory_domain_guid = "fea35cd0-3ec6-4c7d-8b99-1073c5d00d19"
 
 storage_accounts = {
   fslogix = {
-    name                            = "stavditmnpd001"
-    managed_identity_name           = "mi-avd-storage-itm-npd"
-    kind                            = "FileStorage"
-    sku_name                        = "Premium_LRS"
-    identity_auth_directory_service = "AADKERB"
+    name                  = "stavditmnpd001"
+    managed_identity_name = "mi-avd-storage-itm-npd"
+    kind                  = "FileStorage"
+    sku_name              = "Premium_LRS"
+    # identity_auth_directory_service = "AADKERB"  # set to null to disable AAD Kerberos authentication and exempt in entra policy
+    identity_auth_directory_service = null
     private_endpoint_name           = "pe-avd-files-itm-npd"
     private_service_connection_name = "psc-files-itm-npd"
     private_dns_zone_group_name     = "dns-file-itm-npd"
