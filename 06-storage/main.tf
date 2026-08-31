@@ -7,32 +7,83 @@
 #   - AADKERB authentication for FSLogix Kerberos tickets
 
 locals {
-  shares = merge([
-    for storage_key, storage in var.storage_accounts : {
-      for share_key, share in storage.shares : "${storage_key}.${share_key}" => {
-        storage_key = storage_key
-        share_key   = share_key
-        name        = share.name
-        quota_gb    = share.quota_gb
-        rbac_groups = share.rbac_groups
-      }
-    }
-  ]...)
+  shares = {
+    for share in flatten([
+      for storage_key, storage in var.storage_accounts : [
+        for share_key, share in storage.shares : {
+          resource_key            = "${storage_key}.${share_key}"
+          storage_key             = storage_key
+          share_key               = share_key
+          name                    = share.name
+          quota_gb                = share.quota_gb
+          rbac_groups             = share.rbac_groups
+          smb_role_assignments    = share.smb_role_assignments
+          smb_admin_principal_ids = share.smb_admin_principal_ids
+        }
+      ]
+    ]) : share.resource_key => share
+  }
 
-  share_rbac_assignments = merge([
-    for share_resource_key, share in local.shares : {
-      for group_name in share.rbac_groups : "${share_resource_key}.${group_name}" => {
-        share_resource_key = share_resource_key
-        storage_key        = share.storage_key
-        share_name         = share.name
-        group_name         = group_name
-      }
-    }
-  ]...)
+  legacy_share_rbac_assignments = {
+    for assignment in flatten([
+      for share_resource_key, share in local.shares : [
+        for group_name in share.rbac_groups : {
+          resource_key         = "${share_resource_key}.${group_name}"
+          share_resource_key   = share_resource_key
+          storage_key          = share.storage_key
+          share_name           = share.name
+          group_name           = group_name
+          role_definition_name = "Storage File Data SMB Share Contributor"
+        }
+      ]
+    ]) : assignment.resource_key => assignment
+  }
 
   rbac_group_names = toset([
-    for assignment in values(local.share_rbac_assignments) : assignment.group_name
+    for assignment in values(local.legacy_share_rbac_assignments) : assignment.group_name
   ])
+
+  direct_share_rbac_assignments = {
+    for assignment in flatten([
+      for share_resource_key, share in local.shares : [
+        for assignment_key, assignment in share.smb_role_assignments : {
+          resource_key         = "${share_resource_key}.${assignment_key}"
+          share_resource_key   = share_resource_key
+          storage_key          = share.storage_key
+          share_name           = share.name
+          principal_id         = assignment.principal_id
+          role_definition_name = assignment.role_definition_name
+        }
+      ]
+    ]) : assignment.resource_key => assignment
+  }
+
+  share_rbac_assignments = merge(
+    {
+      for key, assignment in local.legacy_share_rbac_assignments : key => {
+        share_resource_key   = assignment.share_resource_key
+        storage_key          = assignment.storage_key
+        share_name           = assignment.share_name
+        principal_id         = data.azuread_group.rbac_groups[assignment.group_name].object_id
+        role_definition_name = assignment.role_definition_name
+      }
+    },
+    local.direct_share_rbac_assignments
+  )
+
+  share_smb_admin_assignments = {
+    for assignment in flatten([
+      for share_resource_key, share in local.shares : [
+        for assignment_key, principal_id in share.smb_admin_principal_ids : {
+          resource_key       = "${share_resource_key}.${assignment_key}"
+          share_resource_key = share_resource_key
+          storage_key        = share.storage_key
+          share_name         = share.name
+          principal_id       = principal_id
+        }
+      ]
+    ]) : assignment.resource_key => assignment
+  }
 }
 
 data "azuread_group" "rbac_groups" {
@@ -79,9 +130,17 @@ resource "azapi_resource" "storage_account" {
       minimumTlsVersion        = "TLS1_2"
       supportsHttpsTrafficOnly = true
 
-      azureFilesIdentityBasedAuthentication = {
-        directoryServiceOptions = each.value.identity_auth_directory_service
-      }
+      azureFilesIdentityBasedAuthentication = merge(
+        {
+          directoryServiceOptions = each.value.identity_auth_directory_service
+        },
+        var.active_directory_domain_name != null && var.active_directory_domain_guid != null ? {
+          activeDirectoryProperties = {
+            domainName = var.active_directory_domain_name
+            domainGuid = var.active_directory_domain_guid
+          }
+        } : {}
+      )
     }
   }
 
@@ -151,14 +210,30 @@ resource "azurerm_storage_account_network_rules" "fslogix_rules" {
   depends_on         = [azurerm_private_endpoint.file_pe]
 }
 
-# ── Storage File Data SMB Share Contributor on FSLogix Storage ────────────────
+# ── Share-level SMB RBAC ──────────────────────────────────────────────────────
 resource "azurerm_role_assignment" "share_smb" {
   for_each = local.share_rbac_assignments
 
   provider             = azurerm.spoke
-  scope                = "${azapi_resource.storage_account[each.value.storage_key].id}/fileServices/default/shares/${each.value.share_name}"
-  role_definition_name = "Storage File Data SMB Share Contributor"
-  principal_id         = data.azuread_group.rbac_groups[each.value.group_name].object_id
+  scope                = azapi_resource.shares[each.value.share_resource_key].id
+  role_definition_name = each.value.role_definition_name
+  principal_id         = each.value.principal_id
+
+  depends_on = [
+    azapi_resource.shares
+  ]
+}
+
+# ── Storage File Data SMB Admin for ACL administrators ────────────────────────
+# This is intentionally separate from normal share access because it allows
+# ownership and ACL administration over SMB.
+resource "azurerm_role_assignment" "share_smb_admin" {
+  for_each = local.share_smb_admin_assignments
+
+  provider             = azurerm.spoke
+  scope                = azapi_resource.shares[each.value.share_resource_key].id
+  role_definition_name = "Storage File Data SMB Admin"
+  principal_id         = each.value.principal_id
 
   depends_on = [
     azapi_resource.shares

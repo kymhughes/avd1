@@ -68,6 +68,28 @@ variable "hub_dns_zone_rg" {
   description = "Hub resource group for private DNS zones"
 }
 
+variable "active_directory_domain_name" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Optional AD DS DNS domain name applied to all storage accounts for hybrid Microsoft Entra Kerberos ACL management."
+}
+
+variable "active_directory_domain_guid" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Optional AD DS domain object GUID applied to all storage accounts for hybrid Microsoft Entra Kerberos ACL management."
+
+  validation {
+    condition = (
+      (var.active_directory_domain_name == null && var.active_directory_domain_guid == null) ||
+      (var.active_directory_domain_name != null && var.active_directory_domain_guid != null)
+    )
+    error_message = "Set both active_directory_domain_name and active_directory_domain_guid, or leave both null."
+  }
+}
+
 variable "storage_accounts" {
   description = "Storage accounts, Azure Files shares, private endpoint names, and share RBAC assignments."
   type = map(object({
@@ -84,6 +106,26 @@ variable "storage_accounts" {
       name        = string
       quota_gb    = number
       rbac_groups = optional(list(string), [])
+      smb_role_assignments = optional(map(object({
+        principal_id         = string
+        role_definition_name = optional(string, "Storage File Data SMB Share Contributor")
+      })), {})
+      smb_admin_principal_ids = optional(map(string), {})
     }))
   }))
+
+  validation {
+    condition = alltrue(flatten([
+      for storage in values(var.storage_accounts) : [
+        for share in values(storage.shares) : [
+          for assignment in values(share.smb_role_assignments) : contains([
+            "Storage File Data SMB Share Reader",
+            "Storage File Data SMB Share Contributor",
+            "Storage File Data SMB Share Elevated Contributor"
+          ], assignment.role_definition_name)
+        ]
+      ]
+    ]))
+    error_message = "Each smb_role_assignments role_definition_name must be SMB Share Reader, Contributor, or Elevated Contributor."
+  }
 }
