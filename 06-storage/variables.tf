@@ -114,14 +114,13 @@ variable "storage_accounts" {
     private_dns_zone_group_name     = string
     private_dns_vnet_link_name      = optional(string)
     shares = map(object({
-      name        = string
-      quota_gb    = number
-      rbac_groups = optional(list(string), [])
+      name     = string
+      quota_gb = number
       smb_role_assignments = optional(map(object({
-        principal_id         = string
+        group_name           = string
         role_definition_name = optional(string, "Storage File Data SMB Share Contributor")
       })), {})
-      smb_admin_principal_ids = optional(map(string), {})
+      smb_admin_groups = optional(list(string), [])
     }))
   }))
 

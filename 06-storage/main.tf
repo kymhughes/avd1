@@ -38,39 +38,19 @@ locals {
     for share in flatten([
       for storage_key, storage in var.storage_accounts : [
         for share_key, share in storage.shares : {
-          resource_key            = "${storage_key}.${share_key}"
-          storage_key             = storage_key
-          share_key               = share_key
-          name                    = share.name
-          quota_gb                = share.quota_gb
-          rbac_groups             = share.rbac_groups
-          smb_role_assignments    = share.smb_role_assignments
-          smb_admin_principal_ids = share.smb_admin_principal_ids
+          resource_key         = "${storage_key}.${share_key}"
+          storage_key          = storage_key
+          share_key            = share_key
+          name                 = share.name
+          quota_gb             = share.quota_gb
+          smb_role_assignments = share.smb_role_assignments
+          smb_admin_groups     = share.smb_admin_groups
         }
       ]
     ]) : share.resource_key => share
   }
 
-  legacy_share_rbac_assignments = {
-    for assignment in flatten([
-      for share_resource_key, share in local.shares : [
-        for group_name in share.rbac_groups : {
-          resource_key         = "${share_resource_key}.${group_name}"
-          share_resource_key   = share_resource_key
-          storage_key          = share.storage_key
-          share_name           = share.name
-          group_name           = group_name
-          role_definition_name = "Storage File Data SMB Share Contributor"
-        }
-      ]
-    ]) : assignment.resource_key => assignment
-  }
-
-  rbac_group_names = toset([
-    for assignment in values(local.legacy_share_rbac_assignments) : assignment.group_name
-  ])
-
-  direct_share_rbac_assignments = {
+  share_rbac_assignments = {
     for assignment in flatten([
       for share_resource_key, share in local.shares : [
         for assignment_key, assignment in share.smb_role_assignments : {
@@ -78,39 +58,31 @@ locals {
           share_resource_key   = share_resource_key
           storage_key          = share.storage_key
           share_name           = share.name
-          principal_id         = assignment.principal_id
+          group_name           = assignment.group_name
           role_definition_name = assignment.role_definition_name
         }
       ]
     ]) : assignment.resource_key => assignment
   }
 
-  share_rbac_assignments = merge(
-    {
-      for key, assignment in local.legacy_share_rbac_assignments : key => {
-        share_resource_key   = assignment.share_resource_key
-        storage_key          = assignment.storage_key
-        share_name           = assignment.share_name
-        principal_id         = data.azuread_group.rbac_groups[assignment.group_name].object_id
-        role_definition_name = assignment.role_definition_name
-      }
-    },
-    local.direct_share_rbac_assignments
-  )
-
   share_smb_admin_assignments = {
     for assignment in flatten([
       for share_resource_key, share in local.shares : [
-        for assignment_key, principal_id in share.smb_admin_principal_ids : {
-          resource_key       = "${share_resource_key}.${assignment_key}"
+        for group_name in share.smb_admin_groups : {
+          resource_key       = "${share_resource_key}.${group_name}"
           share_resource_key = share_resource_key
           storage_key        = share.storage_key
           share_name         = share.name
-          principal_id       = principal_id
+          group_name         = group_name
         }
       ]
     ]) : assignment.resource_key => assignment
   }
+
+  rbac_group_names = toset(concat(
+    [for assignment in values(local.share_rbac_assignments) : assignment.group_name],
+    [for assignment in values(local.share_smb_admin_assignments) : assignment.group_name]
+  ))
 }
 
 data "azuread_group" "rbac_groups" {
@@ -263,7 +235,7 @@ resource "azurerm_role_assignment" "share_smb" {
   provider             = azurerm.spoke
   scope                = azapi_resource.shares[each.value.share_resource_key].id
   role_definition_name = each.value.role_definition_name
-  principal_id         = each.value.principal_id
+  principal_id         = data.azuread_group.rbac_groups[each.value.group_name].object_id
 
   depends_on = [
     azapi_resource.shares
@@ -279,7 +251,7 @@ resource "azurerm_role_assignment" "share_smb_admin" {
   provider             = azurerm.spoke
   scope                = azapi_resource.shares[each.value.share_resource_key].id
   role_definition_name = "Storage File Data SMB Admin"
-  principal_id         = each.value.principal_id
+  principal_id         = data.azuread_group.rbac_groups[each.value.group_name].object_id
 
   depends_on = [
     azapi_resource.shares
