@@ -21,3 +21,7 @@ output "share_smb_role_assignment_ids" {
 output "share_smb_admin_role_assignment_ids" {
   value = { for key, assignment in azurerm_role_assignment.share_smb_admin : key => assignment.id }
 }
+
+output "private_link_identifier_uri_ids" {
+  value = { for key, uri in azuread_application_identifier_uri.storage_private_link : key => uri.id }
+}

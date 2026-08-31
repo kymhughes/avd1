@@ -6,7 +6,34 @@
 #   - public_network_access_enabled   = false  (private endpoint only)
 #   - AADKERB authentication for FSLogix Kerberos tickets
 
+# Entra Kerberos Reg Key
+# reg add HKLM\SYSTEM\CurrentControlSet\Control\Lsa\Kerberos\Parameters /v CloudKerberosTicketRetrievalEnabled /t REG_DWORD /d 1
+
 locals {
+  storage_accounts_with_private_link_identifier_uris = {
+    for storage_key, storage in var.storage_accounts : storage_key => storage
+    if var.manage_private_link_identifier_uris && storage.identity_auth_directory_service == "AADKERB"
+  }
+
+  private_link_identifier_uri_assignments = {
+    for assignment in flatten([
+      for storage_key, storage in local.storage_accounts_with_private_link_identifier_uris : [
+        for identifier_uri in [
+          "api://${var.tenant_id}/HOST/${storage.name}.privatelink.file.core.windows.net",
+          "api://${var.tenant_id}/CIFS/${storage.name}.privatelink.file.core.windows.net",
+          "api://${var.tenant_id}/HTTP/${storage.name}.privatelink.file.core.windows.net",
+          "HOST/${storage.name}.privatelink.file.core.windows.net",
+          "CIFS/${storage.name}.privatelink.file.core.windows.net",
+          "HTTP/${storage.name}.privatelink.file.core.windows.net"
+          ] : {
+          resource_key   = "${storage_key}.${replace(replace(identifier_uri, "/", "_"), ":", "_")}"
+          storage_key    = storage_key
+          identifier_uri = identifier_uri
+        }
+      ]
+    ]) : assignment.resource_key => assignment
+  }
+
   shares = {
     for share in flatten([
       for storage_key, storage in var.storage_accounts : [
@@ -93,6 +120,16 @@ data "azuread_group" "rbac_groups" {
   security_enabled = true
 }
 
+data "azuread_application" "storage_account" {
+  for_each = local.storage_accounts_with_private_link_identifier_uris
+
+  display_name = "[Storage Account] ${each.value.name}.file.core.windows.net"
+
+  depends_on = [
+    azapi_resource.storage_account
+  ]
+}
+
 # ── User-Assigned Managed Identity ───────────────────────────────────────────
 resource "azurerm_user_assigned_identity" "storage_mi" {
   for_each = var.storage_accounts
@@ -147,6 +184,15 @@ resource "azapi_resource" "storage_account" {
   lifecycle {
     prevent_destroy = false
   }
+}
+
+# ── Private-link Kerberos identifier URIs ─────────────────────────────────────
+# Required when clients access Azure Files over private endpoint with Entra Kerberos.
+resource "azuread_application_identifier_uri" "storage_private_link" {
+  for_each = local.private_link_identifier_uri_assignments
+
+  application_id = data.azuread_application.storage_account[each.value.storage_key].id
+  identifier_uri = each.value.identifier_uri
 }
 
 # ── Azure Files Shares ────────────────────────────────────────────────────────

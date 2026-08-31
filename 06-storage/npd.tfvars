@@ -8,6 +8,10 @@ pesubnet_files  = "snet-general-pe"
 # active_directory_domain_name = "contoso.local"
 # active_directory_domain_guid = "00000000-0000-0000-0000-000000000000"
 
+# Admin-hat option: add private-link Kerberos identifier URIs to each storage
+# account Entra app. Requires Graph application read/write permissions.
+# manage_private_link_identifier_uris = true
+
 storage_accounts = {
   fslogix = {
     name                            = "stavditmnpd001"

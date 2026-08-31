@@ -7,6 +7,11 @@ variable "tenant_id" {
   type        = string
   description = "Azure tenant ID."
   default     = null
+
+  validation {
+    condition     = !var.manage_private_link_identifier_uris || var.tenant_id != null
+    error_message = "tenant_id is required when manage_private_link_identifier_uris is true."
+  }
 }
 
 variable "prefix" {
@@ -88,6 +93,12 @@ variable "active_directory_domain_guid" {
     )
     error_message = "Set both active_directory_domain_name and active_directory_domain_guid, or leave both null."
   }
+}
+
+variable "manage_private_link_identifier_uris" {
+  type        = bool
+  default     = false
+  description = "Add private-link Azure Files Kerberos identifier URIs to each storage account Entra application. Requires Microsoft Graph application read/write permissions."
 }
 
 variable "storage_accounts" {
