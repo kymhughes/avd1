@@ -10,7 +10,7 @@ variable "storage_account" {
     managed_identity_name           = string
     kind                            = string
     sku_name                        = string
-    identity_auth_directory_service = optional(string, "AADKERB")
+    identity_auth_directory_service = optional(string)
     private_endpoint_name           = string
     private_service_connection_name = string
     private_dns_zone_group_name     = string

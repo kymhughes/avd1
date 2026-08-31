@@ -62,24 +62,27 @@ resource "azapi_resource" "storage_account" {
     sku = {
       name = var.storage_account.sku_name
     }
-    properties = {
-      allowSharedKeyAccess     = false
-      publicNetworkAccess      = "Disabled"
-      minimumTlsVersion        = "TLS1_2"
-      supportsHttpsTrafficOnly = true
-
-      azureFilesIdentityBasedAuthentication = merge(
-        {
-          directoryServiceOptions = var.storage_account.identity_auth_directory_service
-        },
-        var.active_directory_domain_name != null && var.active_directory_domain_guid != null ? {
-          activeDirectoryProperties = {
-            domainName = var.active_directory_domain_name
-            domainGuid = var.active_directory_domain_guid
-          }
-        } : {}
-      )
-    }
+    properties = merge(
+      {
+        allowSharedKeyAccess     = false
+        publicNetworkAccess      = "Disabled"
+        minimumTlsVersion        = "TLS1_2"
+        supportsHttpsTrafficOnly = true
+      },
+      var.storage_account.identity_auth_directory_service != null ? {
+        azureFilesIdentityBasedAuthentication = merge(
+          {
+            directoryServiceOptions = var.storage_account.identity_auth_directory_service
+          },
+          var.active_directory_domain_name != null && var.active_directory_domain_guid != null ? {
+            activeDirectoryProperties = {
+              domainName = var.active_directory_domain_name
+              domainGuid = var.active_directory_domain_guid
+            }
+          } : {}
+        )
+      } : {}
+    )
   }
 
   lifecycle {
