@@ -106,6 +106,15 @@ subnets = {
           destination_address_prefix = "*"
           destination_port_range     = "443"
         }
+        "Allow-SMB-Inbound" = {
+          priority                   = 200
+          direction                  = "Inbound"
+          access                     = "Allow"
+          protocol                   = "Tcp"
+          source_address_prefix      = "*"
+          destination_address_prefix = "*"
+          destination_port_range     = "445"
+        }
       }
     }
   }
