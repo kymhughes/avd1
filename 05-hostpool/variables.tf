@@ -126,6 +126,12 @@ variable "session_host_security_info" {
   }
 }
 
+variable "enable_session_host_encryption_at_host_policy" {
+  type        = bool
+  description = "Assign an Azure Policy modify rule to the session host resource groups so AVD-created VMs have encryption at host enabled at creation time."
+  default     = true
+}
+
 variable "session_host_boot_diagnostics_info" {
   type        = any
   description = "Default bootDiagnosticsInfo block for automated session host configurations. Individual host pools can override this in session_host_configuration.bootDiagnosticsInfo."

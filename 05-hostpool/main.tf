@@ -177,6 +177,90 @@ resource "azurerm_resource_group" "compute" {
   lifecycle { prevent_destroy = false }
 }
 
+resource "azurerm_policy_definition" "session_host_encryption_at_host" {
+  count = var.enable_session_host_encryption_at_host_policy ? 1 : 0
+
+  name         = "avd-session-host-encryption-at-host-${coalesce(var.environment, "env")}"
+  policy_type  = "Custom"
+  mode         = "Indexed"
+  display_name = "Configure encryption at host for AVD session hosts"
+  description  = "Adds securityProfile.encryptionAtHost=true to Microsoft.Compute/virtualMachines requests so dynamically created AVD session hosts are encrypted at host from creation."
+
+  parameters = jsonencode({
+    effect = {
+      type          = "String"
+      defaultValue  = "Modify"
+      allowedValues = ["Modify", "Audit", "Disabled"]
+      metadata = {
+        displayName = "Effect"
+        description = "Use Modify to patch VM creation/update requests, Audit to report only, or Disabled to turn off this policy."
+      }
+    }
+  })
+
+  policy_rule = jsonencode({
+    if = {
+      allOf = [
+        {
+          field  = "type"
+          equals = "Microsoft.Compute/virtualMachines"
+        },
+        {
+          field     = "Microsoft.Compute/virtualMachines/securityProfile.encryptionAtHost"
+          notEquals = true
+        }
+      ]
+    }
+    then = {
+      effect = "[parameters('effect')]"
+      details = {
+        conflictEffect = "audit"
+        roleDefinitionIds = [
+          "/providers/Microsoft.Authorization/roleDefinitions/9980e02c-c2be-4d73-94e8-173b1dc7cf3c"
+        ]
+        operations = [
+          {
+            operation = "AddOrReplace"
+            field     = "Microsoft.Compute/virtualMachines/securityProfile.encryptionAtHost"
+            value     = true
+          }
+        ]
+      }
+    }
+  })
+}
+
+resource "azurerm_resource_group_policy_assignment" "session_host_encryption_at_host" {
+  for_each = var.enable_session_host_encryption_at_host_policy ? local.host_pools : {}
+
+  name                 = "pa-avd-eah-${each.key}"
+  resource_group_id    = azurerm_resource_group.compute[each.key].id
+  policy_definition_id = azurerm_policy_definition.session_host_encryption_at_host[0].id
+  location             = var.avdLocation
+  display_name         = "Configure encryption at host for ${each.value.name} session hosts"
+  description          = "Ensures VMs created by AVD dynamic host pool management in this resource group have encryption at host enabled at creation time."
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  parameters = jsonencode({
+    effect = {
+      value = "Modify"
+    }
+  })
+}
+
+resource "azurerm_role_assignment" "session_host_encryption_policy_vm_contributor" {
+  for_each = var.enable_session_host_encryption_at_host_policy ? local.host_pools : {}
+
+  scope                = azurerm_resource_group.compute[each.key].id
+  role_definition_name = "Virtual Machine Contributor"
+  principal_id         = azurerm_resource_group_policy_assignment.session_host_encryption_at_host[each.key].identity[0].principal_id
+
+  skip_service_principal_aad_check = true
+}
+
 resource "azapi_resource" "host_pool" {
   for_each = local.host_pools
 
@@ -264,7 +348,8 @@ resource "azapi_resource" "session_host_management" {
   }
 
   depends_on = [
-    azapi_resource.session_host_configuration
+    azapi_resource.session_host_configuration,
+    azurerm_role_assignment.session_host_encryption_policy_vm_contributor
   ]
 }
 
