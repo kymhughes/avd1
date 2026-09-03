@@ -8,6 +8,10 @@ variable "prefix" {
   description = "Prefix for resource names"
 
 }
+variable "aib_rg" {
+  type        = string
+  description = "Resource group for the Azure Image Builder"
+}
 
 variable "tags" {
   description = "Tags to be used for this resource deployment."

@@ -1,4 +1,5 @@
 aib_region                = "australiaeast"
+aib_rg                    = "rg-imagebuilder"
 aib_subnet_id             = ""
 image_replication_regions = ["australiaeast"]
 location                  = "australiaeast"

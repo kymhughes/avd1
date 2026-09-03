@@ -20,7 +20,7 @@ resource "random_string" "aib" {
 }
 
 resource "azurerm_resource_group" "aib" {
-  name     = "rg-${var.location}-avd-${var.prefix}-shared-resources"
+  name     = var.aib_rg
   location = var.location
   tags     = var.tags
 }
