@@ -34,7 +34,7 @@ resource "azurerm_user_assigned_identity" "aib" {
 
 resource "azurerm_role_definition" "aib" {
   name        = "AIB-${random_uuid.aib.result}"
-  scope       = data.azurerm_subscription.current.id
+  scope       = azurerm_resource_group.aib.id
   description = "Azure Image Builder AVD"
 
   permissions {
@@ -69,7 +69,6 @@ resource "azurerm_role_definition" "aib" {
   }
 
   assignable_scopes = [
-    data.azurerm_subscription.current.id,
     azurerm_resource_group.aib.id
   ]
 }
@@ -199,7 +198,7 @@ resource "azurerm_resource_group_template_deployment" "aib" {
               "runOutputName": "[parameters('imageTemplateName')]",
               "artifactTags": {
                 "source": "azureVmImageBuilder",
-                "baseosimg": "windows11"
+                "baseosimg": "windowsserver2022"
               },
               "replicationRegions": [${join(",", formatlist("\"%s\"", var.image_replication_regions))}]
             }

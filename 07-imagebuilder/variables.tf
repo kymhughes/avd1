@@ -31,7 +31,7 @@ variable "sku" {
 }
 
 variable "image_replication_regions" {
-  type        = string
+  type        = list(string)
   description = "Image replication regions"
 }
 

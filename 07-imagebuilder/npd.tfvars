@@ -1,9 +1,9 @@
 aib_region                = "australiaeast"
-image_replication_regions = "australiaeast"
+image_replication_regions = ["australiaeast"]
 location                  = "australiaeast"
-offer                     = "office-365"
-publisher                 = "microsoftwindowsdesktop"
-sku                       = "win11-23h2-avd-m365"
+offer                     = "WindowsServer"
+publisher                 = "MicrosoftWindowsServer"
+sku                       = "2022-datacenter-g2"
 prefix                    = "AIBdemo"
 tags = {
   project = "Custom-Image-Builder-Demo"
