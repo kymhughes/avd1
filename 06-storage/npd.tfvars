@@ -60,10 +60,10 @@ storage_accounts = {
     }
   }
   general2 = {
-    name                            = "stgenitmnpd002"
-    managed_identity_name           = "mi-storage-general2-itm-npd"
-    kind                            = "StorageV2"
-    sku_name                        = "Standard_LRS"
+    name                  = "stgenitmnpd002"
+    managed_identity_name = "mi-storage-general2-itm-npd"
+    kind                  = "StorageV2"
+    sku_name              = "Standard_LRS"
     #identity_auth_directory_service = "AADKERB"
     private_endpoint_name           = "pe-general2-files-itm-npd"
     private_service_connection_name = "psc-general2-files-itm-npd"
