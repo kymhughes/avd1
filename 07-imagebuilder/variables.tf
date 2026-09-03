@@ -50,10 +50,16 @@ variable "aib_subnet_id" {
   default     = ""
 }
 
+variable "aib_container_instance_subnet_id" {
+  type        = string
+  description = "Existing subnet resource ID for Azure Image Builder container/proxy resources. Leave blank to use the Image Builder default."
+  default     = ""
+}
+
 variable "aib_api_version" {
   type        = string
   description = "Image builder API version"
-  default     = "2020-02-14"
+  default     = "2022-02-14"
 }
 
 variable "optimization_script_uri" {

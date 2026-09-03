@@ -165,7 +165,8 @@ resource "azurerm_resource_group_template_deployment" "aib" {
             "vmSize": "Standard_D2s_v5",
             "osDiskSizeGB": 127%{if var.aib_subnet_id != ""},
             "vnetConfig": {
-              "subnetId": "${var.aib_subnet_id}"
+              "subnetId": "${var.aib_subnet_id}"%{if var.aib_container_instance_subnet_id != ""},
+              "containerInstanceSubnetId": "${var.aib_container_instance_subnet_id}"%{endif}
             }%{endif}
           },
   

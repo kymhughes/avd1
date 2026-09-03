@@ -1,5 +1,6 @@
 aib_region                = "eastus"
 aib_subnet_id             = ""
+aib_container_instance_subnet_id = ""
 image_replication_regions = ["eastus"]
 location                  = "eastus"
 offer                     = "WindowsServer"
