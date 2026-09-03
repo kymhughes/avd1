@@ -32,6 +32,12 @@ resource "azurerm_user_assigned_identity" "aib" {
   tags                = var.tags
 }
 
+resource "azurerm_role_assignment" "aib_subnet" {
+  scope                = var.aib_subnet_id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aib.principal_id
+}
+
 resource "azurerm_role_definition" "aib" {
   name        = "AIB-${random_uuid.aib.result}"
   scope       = azurerm_resource_group.aib.id
