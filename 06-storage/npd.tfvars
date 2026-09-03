@@ -65,21 +65,15 @@ storage_accounts = {
     kind                  = "StorageV2"
     sku_name              = "Standard_LRS"
     #identity_auth_directory_service = "AADKERB"
-    private_endpoint_name                = "pe-general2-files-itm-npd"
-    private_service_connection_name      = "psc-general2-files-itm-npd"
-    private_dns_zone_group_name          = "dns-general2-file-itm-npd"
-    private_dns_vnet_link_name           = "link-general2-files-itm-npd"
+    # private_endpoint_name                = "pe-general2-files-itm-npd"
+    # private_service_connection_name      = "psc-general2-files-itm-npd"
+    # private_dns_zone_group_name          = "dns-general2-file-itm-npd"
+    # private_dns_vnet_link_name           = "link-general2-files-itm-npd"
     blob_private_endpoint_enabled        = true
     blob_private_endpoint_name           = "pe-general2-blob-itm-npd"
     blob_private_service_connection_name = "psc-general2-blob-itm-npd"
     blob_private_dns_zone_group_name     = "dns-general2-blob-itm-npd"
-    shares = {
-      shared = {
-        name        = "shared"
-        quota_gb    = 100
-        rbac_groups = ["avd_users_cloud"]
-      }
-    }
+    shares                               = {}
   }
 
 }
