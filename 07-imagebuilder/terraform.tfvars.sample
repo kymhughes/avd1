@@ -1,10 +1,12 @@
 aib_region                = "eastus"
+aib_subnet_id             = ""
 image_replication_regions = ["eastus"]
 location                  = "eastus"
 offer                     = "WindowsServer"
 publisher                 = "MicrosoftWindowsServer"
 sku                       = "2022-datacenter-g2"
 prefix                    = "AIBdemo"
+optimization_script_uri   = "https://raw.githubusercontent.com/Azure/avdaccelerator/main/workload/scripts/Optimize_OS_for_AVD.ps1"
 tags = {
   project = "Custom-Image-Builder-Demo"
 }

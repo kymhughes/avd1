@@ -40,8 +40,19 @@ variable "aib_region" {
   description = "Image builder region"
 }
 
+variable "aib_subnet_id" {
+  type        = string
+  description = "Existing subnet resource ID for the Azure Image Builder build VM. Leave blank to use the default Image Builder networking."
+  default     = ""
+}
+
 variable "aib_api_version" {
   type        = string
   description = "Image builder API version"
   default     = "2020-02-14"
+}
+
+variable "optimization_script_uri" {
+  type        = string
+  description = "URI for the PowerShell script used by Azure Image Builder to optimize the image"
 }

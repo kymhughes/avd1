@@ -163,7 +163,10 @@ resource "azurerm_resource_group_template_deployment" "aib" {
   
           "vmProfile": {
             "vmSize": "Standard_D2s_v5",
-            "osDiskSizeGB": 127
+            "osDiskSizeGB": 127%{if var.aib_subnet_id != ""},
+            "vnetConfig": {
+              "subnetId": "${var.aib_subnet_id}"
+            }%{endif}
           },
   
           "source": {
@@ -177,7 +180,7 @@ resource "azurerm_resource_group_template_deployment" "aib" {
             {
               "type": "PowerShell",
               "name": "CreateBuildPath",
-              "scriptUri": "https://raw.githubusercontent.com/Azure/avdaccelerator/main/workload/scripts/Optimize_OS_for_AVD.ps1"
+              "scriptUri": "${var.optimization_script_uri}"
             },
             {
               "type": "WindowsRestart",
