@@ -6,15 +6,20 @@ variable "storage_key" {
 variable "storage_account" {
   description = "One storage account and its Azure Files shares."
   type = object({
-    name                            = string
-    managed_identity_name           = string
-    kind                            = string
-    sku_name                        = string
-    identity_auth_directory_service = optional(string)
-    private_endpoint_name           = string
-    private_service_connection_name = string
-    private_dns_zone_group_name     = string
-    private_dns_vnet_link_name      = optional(string)
+    name                                 = string
+    managed_identity_name                = string
+    kind                                 = string
+    sku_name                             = string
+    identity_auth_directory_service      = optional(string)
+    file_private_endpoint_enabled        = optional(bool, true)
+    private_endpoint_name                = optional(string)
+    private_service_connection_name      = optional(string)
+    private_dns_zone_group_name          = optional(string)
+    private_dns_vnet_link_name           = optional(string)
+    blob_private_endpoint_enabled        = optional(bool, false)
+    blob_private_endpoint_name           = optional(string)
+    blob_private_service_connection_name = optional(string)
+    blob_private_dns_zone_group_name     = optional(string)
     shares = map(object({
       name     = string
       quota_gb = number
@@ -57,9 +62,16 @@ variable "pesubnet_files" {
   description = "Azure Files private endpoint subnet name."
 }
 
-variable "private_dns_zone_id" {
+variable "file_private_dns_zone_id" {
   type        = string
   description = "Resource ID of privatelink.file.core.windows.net."
+  nullable    = true
+}
+
+variable "blob_private_dns_zone_id" {
+  type        = string
+  description = "Resource ID of privatelink.blob.core.windows.net."
+  nullable    = true
 }
 
 variable "active_directory_domain_name" {

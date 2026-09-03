@@ -1,4 +1,7 @@
 locals {
+  file_private_endpoint_enabled = var.storage_account.file_private_endpoint_enabled
+  blob_private_endpoint_enabled = var.storage_account.blob_private_endpoint_enabled
+
   share_rbac_assignments = {
     for assignment in flatten([
       for share_key, share in var.storage_account.shares : [
@@ -106,6 +109,8 @@ resource "azapi_resource" "shares" {
 }
 
 resource "azurerm_private_endpoint" "file_pe" {
+  count = local.file_private_endpoint_enabled ? 1 : 0
+
   provider            = azurerm.spoke
   name                = var.storage_account.private_endpoint_name
   resource_group_name = var.rg_storage_name
@@ -122,7 +127,30 @@ resource "azurerm_private_endpoint" "file_pe" {
 
   private_dns_zone_group {
     name                 = var.storage_account.private_dns_zone_group_name
-    private_dns_zone_ids = [var.private_dns_zone_id]
+    private_dns_zone_ids = [var.file_private_dns_zone_id]
+  }
+}
+
+resource "azurerm_private_endpoint" "blob_pe" {
+  count = local.blob_private_endpoint_enabled ? 1 : 0
+
+  provider            = azurerm.spoke
+  name                = var.storage_account.blob_private_endpoint_name
+  resource_group_name = var.rg_storage_name
+  location            = var.avdLocation
+  subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.pesubnet_files}"
+  tags                = var.tags
+
+  private_service_connection {
+    name                           = var.storage_account.blob_private_service_connection_name
+    private_connection_resource_id = azapi_resource.storage_account.id
+    is_manual_connection           = false
+    subresource_names              = ["blob"]
+  }
+
+  private_dns_zone_group {
+    name                 = var.storage_account.blob_private_dns_zone_group_name
+    private_dns_zone_ids = [var.blob_private_dns_zone_id]
   }
 }
 
@@ -131,7 +159,7 @@ resource "azurerm_storage_account_network_rules" "storage_rules" {
   storage_account_id = azapi_resource.storage_account.id
   default_action     = "Deny"
   bypass             = ["AzureServices"]
-  depends_on         = [azurerm_private_endpoint.file_pe]
+  depends_on         = [azurerm_private_endpoint.file_pe, azurerm_private_endpoint.blob_pe]
 }
 
 resource "azurerm_role_assignment" "share_smb" {

@@ -93,15 +93,20 @@ variable "active_directory_domain_guid" {
 variable "storage_accounts" {
   description = "Storage accounts, Azure Files shares, private endpoint names, and share RBAC assignments."
   type = map(object({
-    name                            = string
-    managed_identity_name           = string
-    kind                            = string
-    sku_name                        = string
-    identity_auth_directory_service = optional(string)
-    private_endpoint_name           = string
-    private_service_connection_name = string
-    private_dns_zone_group_name     = string
-    private_dns_vnet_link_name      = optional(string)
+    name                                 = string
+    managed_identity_name                = string
+    kind                                 = string
+    sku_name                             = string
+    identity_auth_directory_service      = optional(string)
+    file_private_endpoint_enabled        = optional(bool, true)
+    private_endpoint_name                = optional(string)
+    private_service_connection_name      = optional(string)
+    private_dns_zone_group_name          = optional(string)
+    private_dns_vnet_link_name           = optional(string)
+    blob_private_endpoint_enabled        = optional(bool, false)
+    blob_private_endpoint_name           = optional(string)
+    blob_private_service_connection_name = optional(string)
+    blob_private_dns_zone_group_name     = optional(string)
     shares = map(object({
       name     = string
       quota_gb = number
@@ -126,5 +131,59 @@ variable "storage_accounts" {
       ]
     ]))
     error_message = "Each smb_role_assignments role_definition_name must be SMB Share Reader, Contributor, or Elevated Contributor."
+  }
+
+  validation {
+    condition = alltrue([
+      for storage in values(var.storage_accounts) :
+      !storage.blob_private_endpoint_enabled || contains(["StorageV2", "BlobStorage", "BlockBlobStorage"], storage.kind)
+    ])
+    error_message = "Blob private endpoints can only be enabled for StorageV2, BlobStorage, or BlockBlobStorage accounts."
+  }
+
+  validation {
+    condition = alltrue([
+      for storage in values(var.storage_accounts) :
+      !storage.file_private_endpoint_enabled || contains(["StorageV2", "FileStorage"], storage.kind)
+    ])
+    error_message = "File private endpoints can only be enabled for StorageV2 or FileStorage accounts."
+  }
+
+  validation {
+    condition = alltrue([
+      for storage in values(var.storage_accounts) :
+      !storage.file_private_endpoint_enabled || (
+        storage.private_endpoint_name != null &&
+        storage.private_endpoint_name != "" &&
+        storage.private_service_connection_name != null &&
+        storage.private_service_connection_name != "" &&
+        storage.private_dns_zone_group_name != null &&
+        storage.private_dns_zone_group_name != ""
+      )
+    ])
+    error_message = "When file_private_endpoint_enabled is true, set private_endpoint_name, private_service_connection_name, and private_dns_zone_group_name."
+  }
+
+  validation {
+    condition = alltrue([
+      for storage in values(var.storage_accounts) :
+      storage.file_private_endpoint_enabled || length(storage.shares) == 0
+    ])
+    error_message = "Storage accounts with shares must have file_private_endpoint_enabled set to true."
+  }
+
+  validation {
+    condition = alltrue([
+      for storage in values(var.storage_accounts) :
+      !storage.blob_private_endpoint_enabled || (
+        storage.blob_private_endpoint_name != null &&
+        storage.blob_private_endpoint_name != "" &&
+        storage.blob_private_service_connection_name != null &&
+        storage.blob_private_service_connection_name != "" &&
+        storage.blob_private_dns_zone_group_name != null &&
+        storage.blob_private_dns_zone_group_name != ""
+      )
+    ])
+    error_message = "When blob_private_endpoint_enabled is true, set blob_private_endpoint_name, blob_private_service_connection_name, and blob_private_dns_zone_group_name."
   }
 }
