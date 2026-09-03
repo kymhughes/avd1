@@ -1,5 +1,5 @@
 locals {
-  file_private_endpoint_enabled = var.storage_account.file_private_endpoint_enabled
+  file_private_endpoint_enabled = coalesce(var.storage_account.file_private_endpoint_enabled, length(var.storage_account.shares) > 0)
   blob_private_endpoint_enabled = var.storage_account.blob_private_endpoint_enabled
 
   share_rbac_assignments = {

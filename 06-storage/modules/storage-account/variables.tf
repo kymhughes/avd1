@@ -11,7 +11,7 @@ variable "storage_account" {
     kind                                 = string
     sku_name                             = string
     identity_auth_directory_service      = optional(string)
-    file_private_endpoint_enabled        = optional(bool, true)
+    file_private_endpoint_enabled        = optional(bool)
     private_endpoint_name                = optional(string)
     private_service_connection_name      = optional(string)
     private_dns_zone_group_name          = optional(string)

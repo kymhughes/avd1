@@ -98,7 +98,7 @@ variable "storage_accounts" {
     kind                                 = string
     sku_name                             = string
     identity_auth_directory_service      = optional(string)
-    file_private_endpoint_enabled        = optional(bool, true)
+    file_private_endpoint_enabled        = optional(bool)
     private_endpoint_name                = optional(string)
     private_service_connection_name      = optional(string)
     private_dns_zone_group_name          = optional(string)
@@ -144,7 +144,7 @@ variable "storage_accounts" {
   validation {
     condition = alltrue([
       for storage in values(var.storage_accounts) :
-      !storage.file_private_endpoint_enabled || contains(["StorageV2", "FileStorage"], storage.kind)
+      !coalesce(storage.file_private_endpoint_enabled, length(storage.shares) > 0) || contains(["StorageV2", "FileStorage"], storage.kind)
     ])
     error_message = "File private endpoints can only be enabled for StorageV2 or FileStorage accounts."
   }
@@ -152,7 +152,7 @@ variable "storage_accounts" {
   validation {
     condition = alltrue([
       for storage in values(var.storage_accounts) :
-      !storage.file_private_endpoint_enabled || (
+      !coalesce(storage.file_private_endpoint_enabled, length(storage.shares) > 0) || (
         storage.private_endpoint_name != null &&
         storage.private_endpoint_name != "" &&
         storage.private_service_connection_name != null &&
@@ -167,7 +167,7 @@ variable "storage_accounts" {
   validation {
     condition = alltrue([
       for storage in values(var.storage_accounts) :
-      storage.file_private_endpoint_enabled || length(storage.shares) == 0
+      coalesce(storage.file_private_endpoint_enabled, true) || length(storage.shares) == 0
     ])
     error_message = "Storage accounts with shares must have file_private_endpoint_enabled set to true."
   }

@@ -3,7 +3,7 @@
 
 locals {
   file_private_endpoint_enabled = anytrue([
-    for storage in values(var.storage_accounts) : storage.file_private_endpoint_enabled
+    for storage in values(var.storage_accounts) : coalesce(storage.file_private_endpoint_enabled, length(storage.shares) > 0)
   ])
 
   blob_private_endpoint_enabled = anytrue([
