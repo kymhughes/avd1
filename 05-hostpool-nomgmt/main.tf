@@ -320,6 +320,76 @@ resource "azapi_resource" "session_host_configuration" {
   ]
 }
 
+resource "terraform_data" "session_host_management" {
+  for_each = local.host_pools
+
+  input = {
+    resource_id = "${azapi_resource.host_pool[each.key].id}/sessionHostManagements/default"
+    body = jsonencode({
+      properties = {
+        scheduledDateTimeZone          = var.scaling_plan_time_zone
+        failedSessionHostCleanupPolicy = "KeepAll"
+
+        provisioning = {
+          canaryPolicy  = "Auto"
+          instanceCount = 1
+          setDrainMode  = false
+        }
+
+        update = {
+          maxVmsRemoved      = 1
+          logOffDelayMinutes = 2
+          logOffMessage      = "You will be signed out while this session host is updated."
+          deleteOriginalVm   = true
+        }
+      }
+    })
+  }
+
+  triggers_replace = [
+    azapi_resource.host_pool[each.key].id,
+    var.scaling_plan_time_zone,
+    jsonencode({
+      failedSessionHostCleanupPolicy = "KeepAll"
+      provisioning = {
+        canaryPolicy  = "Auto"
+        instanceCount = 1
+        setDrainMode  = false
+      }
+      update = {
+        maxVmsRemoved      = 1
+        logOffDelayMinutes = 2
+        logOffMessage      = "You will be signed out while this session host is updated."
+        deleteOriginalVm   = true
+      }
+    })
+  ]
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+      az rest \
+        --method put \
+        --url "https://management.azure.com${self.input.resource_id}?api-version=2026-04-01-preview" \
+        --headers "Content-Type=application/json" \
+        --body '${self.input.body}'
+    EOT
+  }
+
+  depends_on = [
+    azapi_resource.session_host_configuration,
+    azurerm_role_assignment.session_host_encryption_policy_vm_contributor
+  ]
+}
+
+removed {
+  from = azapi_resource.session_host_management
+
+  lifecycle {
+    destroy = false
+  }
+}
+
 # ── Application Groups ────────────────────────────────────────────────────────
 resource "azurerm_virtual_desktop_application_group" "this" {
   for_each = local.host_pools
@@ -431,6 +501,6 @@ resource "azapi_resource" "dynamic_scaling_plan" {
     azurerm_role_assignment.host_pool_mi_vm_contributor,
     azurerm_role_assignment.host_pool_mi_subscription_reader,
     azurerm_role_assignment.host_pool_mi_keyvault_secrets_user,
-    azapi_resource.session_host_configuration
+    terraform_data.session_host_management
   ]
 }
