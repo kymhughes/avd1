@@ -8,6 +8,11 @@ data "azurerm_subscription" "current" {}
 resource "random_uuid" "aib" {
 }
 
+data "azurerm_virtual_network" "existing" {
+  name                = var.vnet_name
+  resource_group_name = var.rg_network
+}
+
 resource "random_string" "aib" {
   length  = 8
   special = false
@@ -33,7 +38,8 @@ resource "azurerm_user_assigned_identity" "aib" {
 }
 
 resource "azurerm_role_assignment" "aib_subnet" {
-  scope                = var.aib_subnet_id
+  #scope                = var.aib_subnet_id
+  scope                = data.azurerm_virtual_network.existing.id
   role_definition_name = "Network Contributor"
   principal_id         = azurerm_user_assigned_identity.aib.principal_id
 }
@@ -87,7 +93,7 @@ resource "azurerm_role_assignment" "aib" {
 
 resource "time_sleep" "aib" {
   depends_on      = [azurerm_role_assignment.aib]
-  create_duration = "60s"
+  create_duration = "180s"
 }
 
 resource "azurerm_shared_image_gallery" "aib" {

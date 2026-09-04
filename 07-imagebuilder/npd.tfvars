@@ -9,6 +9,8 @@ publisher                        = "MicrosoftWindowsServer"
 sku                              = "2022-datacenter-g2"
 prefix                           = "AIBdemo"
 optimization_script_uri          = "https://raw.githubusercontent.com/Azure/avdaccelerator/main/workload/scripts/Optimize_OS_for_AVD.ps1"
+rg_network                       = "rg-itm-network-npd"
+vnet_name                        = "vnet-itm-vnet-npd"
 tags = {
   project = "Custom-Image-Builder-Demo"
 }

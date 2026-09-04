@@ -66,3 +66,12 @@ variable "optimization_script_uri" {
   type        = string
   description = "URI for the PowerShell script used by Azure Image Builder to optimize the image"
 }
+variable "rg_network" {
+  type        = string
+  description = "Network resource group name."
+}
+
+variable "vnet_name" {
+  type        = string
+  description = "Spoke virtual network name."
+}
