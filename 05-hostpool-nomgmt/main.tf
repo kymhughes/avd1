@@ -1,11 +1,7 @@
 # ── AVD Host Pool, Application Group, Workspace, Scaling Plan ─────────────────
 # Depends on: 01-resource-groups (rg_service_objects_name), 03-monitoring (log_analytics_workspace_id)
-# Provides:   hostpool_id, registration_token, application_group_id, workspace_id
+# Provides:   hostpool_id, application_group_id, workspace_id
 #             → consumed by 07-session-hosts, 08-rbac
-#
-# CRITICAL: Entra SSO properties (enablerdsaadauth, targetisaadjoined) MUST be in
-#           custom_properties{} map — NOT in custom_rdp_properties typed object.
-#           The AVM typed object only supports 11 named fields and silently drops anything else.
 
 
 data "azurerm_virtual_desktop_workspace" "this" {
@@ -24,10 +20,6 @@ data "azurerm_private_dns_zone" "avd_feed_dns" {
   name                = "privatelink.wvd.microsoft.com"
   resource_group_name = var.hub_dns_zone_rg
 }
-
-data "azurerm_client_config" "current" {}
-
-
 
 ###################################################################################
 #Assign nesssesary roles for each Session Pool Managed ID for dynamic autoscale to work
@@ -80,6 +72,7 @@ locals {
     avd_users_group                        = null
     app_group_default_desktop_display_name = null
     app_group_type                         = null
+    remote_apps                            = []
     hostpool_type                          = null
     hostpool_load_balancer_type            = null
     hostpool_maximum_sessions_allowed      = null
@@ -89,8 +82,6 @@ locals {
     session_host_subnet_name               = null
     hostpool_private_endpoint_subnet_name  = null
     session_host_configuration             = {}
-    create_registration_token              = null
-    registration_token_ttl                 = null
     scaling_plan_name                      = null
     scaling_plan_friendly_name             = null
     scaling_plan_description               = null
@@ -129,36 +120,15 @@ locals {
     )
   }
 
-  legacy_host_pool_names = length(var.host_pools) == 0 && var.hostpool_name != null && var.app_group_name != null ? toset([var.hostpool_name]) : toset([])
+  host_pools = local.host_pools_from_var
 
-  legacy_host_pools = {
-    for hostpool_name in local.legacy_host_pool_names : hostpool_name => {
-      name                                   = var.hostpool_name
-      resource_group_name                    = var.rg_pool
-      tags                                   = var.tags
-      avd_users_group                        = var.avd_users_group
-      app_group_name                         = var.app_group_name
-      app_group_default_desktop_display_name = var.app_group_default_desktop_display_name
-      app_group_type                         = var.app_group_type
-      hostpool_type                          = var.hostpool_type
-      hostpool_load_balancer_type            = var.hostpool_load_balancer_type
-      hostpool_maximum_sessions_allowed      = var.hostpool_maximum_sessions_allowed
-      hostpool_start_vm_on_connect           = var.hostpool_start_vm_on_connect
-      hostpool_validate_environment          = var.hostpool_validate_environment
-      hostpool_custom_rdp_properties         = var.hostpool_custom_rdp_properties
-      session_host_subnet_name               = null
-      hostpool_private_endpoint_subnet_name  = var.hostpool_private_endpoint_subnet_name
-      session_host_configuration             = var.host_pool_vm_template
-      create_registration_token              = var.create_registration_token
-      registration_token_ttl                 = var.registration_token_ttl
-      scaling_plan_name                      = var.scaling_plan_name
-      scaling_plan_friendly_name             = var.scaling_plan_friendly_name
-      scaling_plan_description               = var.scaling_plan_description
-      dynamic_scaling_plan_schedules         = var.dynamic_scaling_plan_schedules
-    }
-  }
-
-  host_pools = merge(local.host_pools_from_var, local.legacy_host_pools)
+  remote_apps = flatten([
+    for host_pool_name, host_pool in local.host_pools : [
+      for app in host_pool.remote_apps : merge(app, {
+        host_pool_name = host_pool_name
+      })
+    ] if coalesce(host_pool.app_group_type, var.app_group_type) == "RemoteApp"
+  ])
 }
 
 data "azuread_group" "avd_users" {
@@ -174,94 +144,7 @@ resource "azurerm_resource_group" "compute" {
   location = var.avdLocation
   name     = coalesce(each.value.resource_group_name, "rg-${each.value.name}-${var.environment}")
   tags     = each.value.tags
-  lifecycle { prevent_destroy = false }
 }
-
-/*
-resource "azurerm_policy_definition" "session_host_encryption_at_host" {
-  count = var.enable_session_host_encryption_at_host_policy ? 1 : 0
-
-  name         = "avd-session-host-encryption-at-host-${coalesce(var.environment, "env")}"
-  policy_type  = "Custom"
-  mode         = "Indexed"
-  display_name = "Configure encryption at host for AVD session hosts"
-  description  = "Adds securityProfile.encryptionAtHost=true to Microsoft.Compute/virtualMachines requests so dynamically created AVD session hosts are encrypted at host from creation."
-
-  parameters = jsonencode({
-    effect = {
-      type          = "String"
-      defaultValue  = "Modify"
-      allowedValues = ["Modify", "Audit", "Disabled"]
-      metadata = {
-        displayName = "Effect"
-        description = "Use Modify to patch VM creation/update requests, Audit to report only, or Disabled to turn off this policy."
-      }
-    }
-  })
-
-  policy_rule = jsonencode({
-    if = {
-      allOf = [
-        {
-          field  = "type"
-          equals = "Microsoft.Compute/virtualMachines"
-        },
-        {
-          field     = "Microsoft.Compute/virtualMachines/securityProfile.encryptionAtHost"
-          notEquals = true
-        }
-      ]
-    }
-    then = {
-      effect = "[parameters('effect')]"
-      details = {
-        conflictEffect = "audit"
-        roleDefinitionIds = [
-          "/providers/Microsoft.Authorization/roleDefinitions/9980e02c-c2be-4d73-94e8-173b1dc7cf3c"
-        ]
-        operations = [
-          {
-            operation = "AddOrReplace"
-            field     = "Microsoft.Compute/virtualMachines/securityProfile.encryptionAtHost"
-            value     = true
-          }
-        ]
-      }
-    }
-  })
-}
-
-resource "azurerm_resource_group_policy_assignment" "session_host_encryption_at_host" {
-  for_each = var.enable_session_host_encryption_at_host_policy ? local.host_pools : {}
-
-  name                 = "pa-avd-eah-${each.key}"
-  resource_group_id    = azurerm_resource_group.compute[each.key].id
-  policy_definition_id = azurerm_policy_definition.session_host_encryption_at_host[0].id
-  location             = var.avdLocation
-  display_name         = "Configure encryption at host for ${each.value.name} session hosts"
-  description          = "Ensures VMs created by AVD dynamic host pool management in this resource group have encryption at host enabled at creation time."
-
-  identity {
-    type = "SystemAssigned"
-  }
-
-  parameters = jsonencode({
-    effect = {
-      value = "Modify"
-    }
-  })
-}
-
-resource "azurerm_role_assignment" "session_host_encryption_policy_vm_contributor" {
-  for_each = var.enable_session_host_encryption_at_host_policy ? local.host_pools : {}
-
-  scope                = azurerm_resource_group.compute[each.key].id
-  role_definition_name = "Virtual Machine Contributor"
-  principal_id         = azurerm_resource_group_policy_assignment.session_host_encryption_at_host[each.key].identity[0].principal_id
-
-  skip_service_principal_aad_check = true
-}
-*/
 
 resource "azapi_resource" "host_pool" {
   for_each = local.host_pools
@@ -311,7 +194,7 @@ resource "azapi_resource" "session_host_configuration" {
   parent_id = azapi_resource.host_pool[each.key].id
 
   body = {
-    properties = coalesce(each.value.session_host_configuration, var.host_pool_vm_template)
+    properties = each.value.session_host_configuration
   }
 
   depends_on = [
@@ -400,8 +283,25 @@ resource "azurerm_virtual_desktop_application_group" "this" {
   resource_group_name          = azurerm_resource_group.compute[each.key].name
   type                         = coalesce(each.value.app_group_type, var.app_group_type)
   host_pool_id                 = azapi_resource.host_pool[each.key].id
-  default_desktop_display_name = coalesce(each.value.app_group_default_desktop_display_name, var.app_group_default_desktop_display_name)
+  default_desktop_display_name = coalesce(each.value.app_group_type, var.app_group_type) == "Desktop" ? coalesce(each.value.app_group_default_desktop_display_name, var.app_group_default_desktop_display_name) : null
   tags                         = each.value.tags
+}
+
+resource "azurerm_virtual_desktop_application" "remote_apps" {
+  for_each = {
+    for app in local.remote_apps : "${app.host_pool_name}-${app.name}" => app
+  }
+
+  name                         = each.value.name
+  application_group_id         = azurerm_virtual_desktop_application_group.this[each.value.host_pool_name].id
+  friendly_name                = try(each.value.friendly_name, each.value.name)
+  description                  = try(each.value.description, null)
+  path                         = each.value.path
+  command_line_argument_policy = try(each.value.command_line_argument_policy, "DoNotAllow")
+  command_line_arguments       = try(each.value.command_line_arguments, null)
+  show_in_portal               = try(each.value.show_in_portal, true)
+  icon_path                    = try(each.value.icon_path, each.value.path)
+  icon_index                   = try(each.value.icon_index, 0)
 }
 
 resource "azurerm_role_assignment" "avd_users" {

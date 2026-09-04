@@ -1,5 +1,4 @@
 rg_so                          = "rg-service-objects-npd"
-rg_pool                        = "rg-it01-pool-npd"
 hostpool_start_vm_on_connect   = true
 hostpool_validate_environment  = true
 key_vault_name                 = "kv-avd-itm-npd"
@@ -36,18 +35,11 @@ host_pools = [
           offer        = "WindowsServer"
           sku          = "2022-datacenter-azure-edition"
           exactVersion = "20348.5499.260809"
-          # publisher    = "MicrosoftWindowsDesktop"   # Windows 11 AVD image retained for reference.
-          # offer        = "windows-11"
-          # sku          = "win11-25h2-avd"
-          # exactVersion = "26200.9168.260809"
         }
       }
 
       domainInfo = {
         joinType = "AzureActiveDirectory"
-        #azureActiveDirectoryInfo = {       #Not applicable for server 2022
-        #  mdmProviderGuid = "0000000a-0000-0000-c000-000000000000"
-        #}
       }
 
       vmTags = {
@@ -61,6 +53,7 @@ host_pools = [
     resource_group_name                    = "rg-pool-itm002-npd"
     avd_users_group                        = "avd_users_cloud"
     app_group_name                         = "app-itm002"
+    app_group_type                         = "RemoteApp"
     app_group_default_desktop_display_name = "itm002"
     scaling_plan_name                      = "sp-itm002-npd"
     scaling_plan_friendly_name             = "ITM002 NPD Dynamic Autoscale"
@@ -80,18 +73,11 @@ host_pools = [
           offer        = "WindowsServer"
           sku          = "2022-datacenter-azure-edition"
           exactVersion = "20348.5499.260809"
-          # publisher    = "MicrosoftWindowsDesktop"   # Windows 11 AVD image retained for reference.
-          # offer        = "windows-11"
-          # sku          = "win11-25h2-avd"
-          # exactVersion = "26200.9168.260809"
         }
       }
 
       domainInfo = {
         joinType = "AzureActiveDirectory"
-        #azureActiveDirectoryInfo = {       #Not applicable for server 2022
-        #  mdmProviderGuid = "0000000a-0000-0000-c000-000000000000"
-        #}
       }
 
       vmTags = {
@@ -99,5 +85,15 @@ host_pools = [
         workload    = "avd002"
       }
     }
+
+    remote_apps = [
+      {
+        name          = "server-manager"
+        friendly_name = "Server Manager"
+        description   = "Windows Server Manager remote app"
+        path          = "C:\\Windows\\System32\\ServerManager.exe"
+        icon_path     = "C:\\Windows\\System32\\ServerManager.exe"
+      }
+    ]
   }
 ]
