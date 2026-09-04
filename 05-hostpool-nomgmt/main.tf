@@ -177,6 +177,7 @@ resource "azurerm_resource_group" "compute" {
   lifecycle { prevent_destroy = false }
 }
 
+/*
 resource "azurerm_policy_definition" "session_host_encryption_at_host" {
   count = var.enable_session_host_encryption_at_host_policy ? 1 : 0
 
@@ -260,6 +261,7 @@ resource "azurerm_role_assignment" "session_host_encryption_policy_vm_contributo
 
   skip_service_principal_aad_check = true
 }
+*/
 
 resource "azapi_resource" "host_pool" {
   for_each = local.host_pools
@@ -377,8 +379,7 @@ resource "terraform_data" "session_host_management" {
   }
 
   depends_on = [
-    azapi_resource.session_host_configuration,
-    azurerm_role_assignment.session_host_encryption_policy_vm_contributor
+    azapi_resource.session_host_configuration
   ]
 }
 
