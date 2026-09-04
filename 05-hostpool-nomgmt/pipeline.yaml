@@ -40,10 +40,21 @@ parameters:
     default: false
 
 stages:
+  - template: pre-destroy-session-host-cleanup.yml
+    parameters:
+      stageName: PreDestroyNPD
+      environmentName: NPD
+      doDestroy: ${{ parameters.doDestroy }}
+      runStage: ${{ parameters.deployNpd }}
+      azureServiceConnection: $(azureServiceConnection)
+      deploymentSubscriptionId: $(deploymentSubscriptionId)
+      computeResourceGroups: rg-pool-itm001-npd rg-pool-itm002-npd
+
   - template: ../_common/terraform-plan-apply.yml
     parameters:
       stageName: NPD
       environmentName: npd
+      dependsOn: PreDestroyNPD
       doDestroy: ${{ parameters.doDestroy }}
       azureServiceConnection: $(azureServiceConnection)
       deploymentSubscriptionId: $(deploymentSubscriptionId)
