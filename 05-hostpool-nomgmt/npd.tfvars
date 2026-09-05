@@ -10,11 +10,6 @@ scaling_plan_time_zone         = "AUS Eastern Standard Time"
 scaling_plan_exclusion_tag     = "excludeFromScaling"
 hostpool_custom_rdp_properties = "targetisaadjoined:i:1;audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
 
-enable_session_host_uami_policy                = true
-session_host_uami_name                         = "id-avd-session-hosts-npd"
-session_host_uami_storage_scope                = "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd23faad9e/resourceGroups/rg-service-objects-npd/providers/Microsoft.Storage/storageAccounts/stgenitmnpd002/blobServices/default/containers/data"
-enable_session_host_bootstrap_extension_policy = true
-
 host_pools = [
   {
     name                                   = "pool-itm001"
@@ -27,7 +22,7 @@ host_pools = [
     scaling_plan_description               = "Default dynamic autoscale plan for ITM001 NPD."
     session_host_subnet_name               = "snet-itm-001"
     hostpool_private_endpoint_subnet_name  = "snet-itm-001-pe"
-    bootstrap_script_url                   = "https://stgenitmnpd002.blob.core.windows.net/data/bootstrap-itm001.ps1"
+    custom_configuration_script_url        = "https://stgenitmnpd002.blob.core.windows.net/data/bootstrap-itm001.ps1"
     session_host_configuration = {
       friendlyName = "ITM001 NPD session hosts"
       vmLocation   = "australiaeast"
@@ -70,7 +65,6 @@ host_pools = [
     scaling_plan_description               = "Default dynamic autoscale plan for ITM002 NPD."
     session_host_subnet_name               = "snet-itm-002"
     hostpool_private_endpoint_subnet_name  = "snet-itm-002-pe"
-    bootstrap_script_url                   = "https://stgenitmnpd002.blob.core.windows.net/data/bootstrap-itm002.ps1"
     session_host_configuration = {
       friendlyName = "ITM002 NPD session hosts"
       vmLocation   = "australiaeast"
