@@ -3,11 +3,6 @@ variable "location" {
   description = "Resource group location. Make sure you are deploying in a location where Azure Image Builder is supported"
 }
 
-variable "prefix" {
-  type        = string
-  description = "Prefix for resource names"
-
-}
 variable "aib_rg" {
   type        = string
   description = "Resource group for the Azure Image Builder"
@@ -32,6 +27,32 @@ variable "offer" {
 variable "sku" {
   type        = string
   description = "Image SKU"
+}
+
+variable "source_image_version" {
+  type        = string
+  description = "Source platform image version for Azure Image Builder."
+  default     = "latest"
+}
+
+variable "compute_gallery_name" {
+  type        = string
+  description = "Azure Compute Gallery name for the image output."
+}
+
+variable "gallery_image_definition_name" {
+  type        = string
+  description = "Azure Compute Gallery image definition name for the image output."
+}
+
+variable "image_template_name" {
+  type        = string
+  description = "Azure Image Builder image template name."
+}
+
+variable "run_output_name" {
+  type        = string
+  description = "Azure Image Builder run output name."
 }
 
 variable "image_replication_regions" {

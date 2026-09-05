@@ -145,6 +145,13 @@ subnets = {
     private_subnet_enabled                        = true
     private_endpoint_network_policies             = "Disabled"
     private_link_service_network_policies_enabled = false
+
+    delegations = {
+      container_instances = {
+        service_name = "Microsoft.ContainerInstance/containerGroups"
+        actions      = ["Microsoft.Network/virtualNetworks/subnets/action"]
+      }
+    }
     nsg = {
       create = true
       security_rules = {

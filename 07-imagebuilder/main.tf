@@ -13,17 +13,6 @@ data "azurerm_virtual_network" "existing" {
   resource_group_name = var.rg_network
 }
 
-resource "random_string" "aib" {
-  length  = 8
-  special = false
-  upper   = false
-  numeric = false
-  lower   = true
-  keepers = {
-    always_run = "${timestamp()}"
-  }
-}
-
 resource "azurerm_resource_group" "aib" {
   name     = var.aib_rg
   location = var.location
@@ -97,14 +86,14 @@ resource "time_sleep" "aib" {
 }
 
 resource "azurerm_shared_image_gallery" "aib" {
-  name                = "avdgallery_${var.location}_${var.prefix}"
+  name                = var.compute_gallery_name
   resource_group_name = azurerm_resource_group.aib.name
   location            = azurerm_resource_group.aib.location
   tags                = var.tags
 }
 
 resource "azurerm_shared_image" "aib" {
-  name                = "avdImage-${var.publisher}-${var.offer}-${var.sku}"
+  name                = var.gallery_image_definition_name
   gallery_name        = azurerm_shared_image_gallery.aib.name
   resource_group_name = azurerm_resource_group.aib.name
   location            = azurerm_resource_group.aib.location
@@ -119,12 +108,13 @@ resource "azurerm_shared_image" "aib" {
 }
 
 resource "azurerm_resource_group_template_deployment" "aib" {
-  name                = random_string.aib.result
-  resource_group_name = azurerm_resource_group.aib.name
-  deployment_mode     = "Incremental"
+  name                                = var.image_template_name
+  resource_group_name                 = azurerm_resource_group.aib.name
+  deployment_mode                     = "Incremental"
+  delete_nested_items_during_deletion = false
   parameters_content = jsonencode({
     "imageTemplateName" = {
-      value = random_string.aib.result
+      value = var.image_template_name
     },
     "api-version" = {
       value = var.aib_api_version
@@ -184,10 +174,10 @@ resource "azurerm_resource_group_template_deployment" "aib" {
   
           "source": {
             "type": "PlatformImage",
-            "publisher": "MicrosoftWindowsServer",
-            "offer": "WindowsServer",
-            "sku": "2022-datacenter-g2",
-            "version": "latest"
+            "publisher": "${var.publisher}",
+            "offer": "${var.offer}",
+            "sku": "${var.sku}",
+            "version": "${var.source_image_version}"
           },
           "customize": [
             {
@@ -211,7 +201,7 @@ resource "azurerm_resource_group_template_deployment" "aib" {
             {
               "type": "SharedImage",
               "galleryImageId": "${azurerm_shared_image.aib.id}",
-              "runOutputName": "[parameters('imageTemplateName')]",
+              "runOutputName": "${var.run_output_name}",
               "artifactTags": {
                 "source": "azureVmImageBuilder",
                 "baseosimg": "windowsserver2022"
@@ -237,7 +227,7 @@ resource "null_resource" "aib" {
   }
 
   provisioner "local-exec" {
-    command = "az resource invoke-action --resource-group ${azurerm_resource_group.aib.name} --resource-type Microsoft.VirtualMachineImages/imageTemplates -n ${random_string.aib.result} --action Run"
+    command = "az resource invoke-action --resource-group ${azurerm_resource_group.aib.name} --resource-type Microsoft.VirtualMachineImages/imageTemplates -n ${var.image_template_name} --action Run"
   }
 
   depends_on = [
