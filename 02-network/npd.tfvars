@@ -119,10 +119,11 @@ subnets = {
     }
   }
   "snet-ib1-vms" = {
-    name                              = "ib1-vms"
-    address_prefixes                  = ["172.17.100.192/28"]
-    private_subnet_enabled            = true
-    private_endpoint_network_policies = "Disabled"
+    name                                          = "ib1-vms"
+    address_prefixes                              = ["172.17.100.192/28"]
+    private_subnet_enabled                        = true
+    private_endpoint_network_policies             = "Disabled"
+    private_link_service_network_policies_enabled = false
     nsg = {
       create = true
       security_rules = {
@@ -139,10 +140,11 @@ subnets = {
     }
   }
   "snet-ib2-tools" = {
-    name                              = "ib2-tools"
-    address_prefixes                  = ["172.17.100.224/28"]
-    private_subnet_enabled            = true
-    private_endpoint_network_policies = "Disabled"
+    name                                          = "ib2-tools"
+    address_prefixes                              = ["172.17.100.224/28"]
+    private_subnet_enabled                        = true
+    private_endpoint_network_policies             = "Disabled"
+    private_link_service_network_policies_enabled = false
     nsg = {
       create = true
       security_rules = {
