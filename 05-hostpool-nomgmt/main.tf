@@ -177,14 +177,6 @@ data "azurerm_resource_group" "compute" {
   ]
 }
 
-removed {
-  from = azurerm_resource_group.compute
-
-  lifecycle {
-    destroy = false
-  }
-}
-
 resource "azapi_resource" "host_pool" {
   for_each = local.host_pools
 
@@ -303,14 +295,6 @@ resource "terraform_data" "session_host_management" {
   depends_on = [
     azapi_resource.session_host_configuration
   ]
-}
-
-removed {
-  from = azapi_resource.session_host_management
-
-  lifecycle {
-    destroy = false
-  }
 }
 
 # ── Application Groups ────────────────────────────────────────────────────────

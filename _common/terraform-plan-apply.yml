@@ -28,6 +28,7 @@ stages:
 
     jobs:
       - job: Terraform
+        timeoutInMinutes: 120
         displayName: ${{ parameters.environmentName }} doDestroy=${{ parameters.doDestroy }}
         steps:
           - checkout: self

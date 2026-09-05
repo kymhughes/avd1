@@ -28,6 +28,8 @@ host_pools = [
       vmNamePrefix = "itm001"
       vmSizeId     = "Standard_D2s_v5"
 
+      customConfigurationScriptUrl = "https://stgenitmnpd002.blob.core.windows.net/data"
+
       imageInfo = {
         type = "Marketplace"
         marketplaceInfo = {

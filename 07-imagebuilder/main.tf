@@ -171,7 +171,7 @@ resource "azurerm_resource_group_template_deployment" "aib" {
         },
   
         "properties": {
-          "buildTimeoutInMinutes": 100,
+          "buildTimeoutInMinutes": 120,
   
           "vmProfile": {
             "vmSize": "Standard_D2s_v5",
