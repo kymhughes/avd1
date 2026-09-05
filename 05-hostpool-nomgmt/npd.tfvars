@@ -10,6 +10,11 @@ scaling_plan_time_zone         = "AUS Eastern Standard Time"
 scaling_plan_exclusion_tag     = "excludeFromScaling"
 hostpool_custom_rdp_properties = "targetisaadjoined:i:1;audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
 
+enable_session_host_uami_policy = true
+session_host_uami_name          = "id-avd-session-hosts-npd"
+session_host_uami_workloads     = ["avd001", "avd002"]
+session_host_uami_storage_scope = "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd23faad9e/resourceGroups/rg-service-objects-npd/providers/Microsoft.Storage/storageAccounts/stgenitmnpd002/blobServices/default/containers/data"
+
 host_pools = [
   {
     name                                   = "pool-itm001"
@@ -27,8 +32,6 @@ host_pools = [
       vmLocation   = "australiaeast"
       vmNamePrefix = "itm001"
       vmSizeId     = "Standard_D2s_v5"
-
-      customConfigurationScriptUrl = "https://stgenitmnpd002.blob.core.windows.net/data"
 
       imageInfo = {
         type = "Marketplace"

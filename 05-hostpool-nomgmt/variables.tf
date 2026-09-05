@@ -111,6 +111,30 @@ variable "session_host_vm_admin_credentials" {
   default     = null
 }
 
+variable "enable_session_host_uami_policy" {
+  type        = bool
+  description = "Create a user-assigned managed identity and Azure Policy assignment that attaches it to AVD-created session host VMs."
+  default     = false
+}
+
+variable "session_host_uami_name" {
+  type        = string
+  description = "Name of the user-assigned managed identity to attach to AVD-created session host VMs."
+  default     = null
+}
+
+variable "session_host_uami_workloads" {
+  type        = list(string)
+  description = "VM workload tag values used by the managed identity assignment policy to match AVD-created session hosts."
+  default     = []
+}
+
+variable "session_host_uami_storage_scope" {
+  type        = string
+  description = "Optional Azure resource ID scope where the session host managed identity receives Storage Blob Data Reader."
+  default     = null
+}
+
 variable "scheduled_agent_updates" {
   description = "Optional scheduled AVD agent update configuration."
   type = object({

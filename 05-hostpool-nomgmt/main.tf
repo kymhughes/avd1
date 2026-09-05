@@ -21,6 +21,114 @@ data "azurerm_private_dns_zone" "avd_feed_dns" {
   resource_group_name = var.hub_dns_zone_rg
 }
 
+resource "azurerm_user_assigned_identity" "session_hosts" {
+  count = var.enable_session_host_uami_policy ? 1 : 0
+
+  name                = var.session_host_uami_name
+  location            = var.avdLocation
+  resource_group_name = var.rg_so
+  tags                = var.tags
+}
+
+resource "azurerm_role_assignment" "session_hosts_blob_reader" {
+  count = var.enable_session_host_uami_policy && var.session_host_uami_storage_scope != null ? 1 : 0
+
+  scope                = var.session_host_uami_storage_scope
+  role_definition_name = "Storage Blob Data Reader"
+  principal_id         = azurerm_user_assigned_identity.session_hosts[0].principal_id
+}
+
+resource "azurerm_policy_definition" "assign_session_host_uami" {
+  count = var.enable_session_host_uami_policy ? 1 : 0
+
+  name         = "assign-avd-session-host-uami-${coalesce(var.environment, "env")}"
+  policy_type  = "Custom"
+  mode         = "Indexed"
+  display_name = "Assign user-assigned managed identity to AVD session hosts"
+  description  = "Adds the shared session host user-assigned managed identity to AVD-created session host VMs matched by workload tag."
+
+  parameters = jsonencode({
+    effect = {
+      type          = "String"
+      defaultValue  = "Modify"
+      allowedValues = ["Modify", "Audit", "Disabled"]
+      metadata = {
+        displayName = "Effect"
+        description = "Use Modify to assign the managed identity, Audit to report only, or Disabled to turn off this policy."
+      }
+    }
+  })
+
+  policy_rule = jsonencode({
+    if = {
+      allOf = [
+        {
+          field  = "type"
+          equals = "Microsoft.Compute/virtualMachines"
+        },
+        {
+          field = "tags['workload']"
+          in    = var.session_host_uami_workloads
+        }
+      ]
+    }
+    then = {
+      effect = "[parameters('effect')]"
+      details = {
+        conflictEffect = "audit"
+        roleDefinitionIds = [
+          "/providers/Microsoft.Authorization/roleDefinitions/9980e02c-c2be-4d73-94e8-173b1dc7cf3c"
+        ]
+        operations = [
+          {
+            operation = "addOrReplace"
+            field     = "identity.type"
+            value     = "UserAssigned"
+          },
+          {
+            operation = "addOrReplace"
+            field     = "identity.userAssignedIdentities"
+            value = {
+              (azurerm_user_assigned_identity.session_hosts[0].id) = {}
+            }
+          }
+        ]
+      }
+    }
+  })
+}
+
+resource "azurerm_resource_group_policy_assignment" "assign_session_host_uami" {
+  for_each = var.enable_session_host_uami_policy ? local.host_pools : {}
+
+  name                 = "pa-avd-uami-${each.key}"
+  resource_group_id    = data.azurerm_resource_group.compute[each.key].id
+  policy_definition_id = azurerm_policy_definition.assign_session_host_uami[0].id
+  location             = var.avdLocation
+  display_name         = "Assign managed identity to ${each.value.name} session hosts"
+  description          = "Assigns ${var.session_host_uami_name} to AVD session host VMs with matching workload tags."
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  parameters = jsonencode({
+    effect = {
+      value = "Modify"
+    }
+  })
+}
+
+resource "azurerm_role_assignment" "session_host_uami_policy_vm_contributor" {
+  for_each = var.enable_session_host_uami_policy ? local.host_pools : {}
+
+  scope                = data.azurerm_resource_group.compute[each.key].id
+  role_definition_name = "Virtual Machine Contributor"
+  principal_id         = azurerm_resource_group_policy_assignment.assign_session_host_uami[each.key].identity[0].principal_id
+
+  skip_service_principal_aad_check = true
+}
+
 ###################################################################################
 #Assign nesssesary roles for each Session Pool Managed ID for dynamic autoscale to work
 ###################################################################################
