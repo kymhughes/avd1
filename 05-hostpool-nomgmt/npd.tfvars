@@ -31,10 +31,15 @@ host_pools = [
       imageInfo = {
         type = "Marketplace"
         marketplaceInfo = {
-          publisher    = "MicrosoftWindowsServer"
-          offer        = "WindowsServer"
-          sku          = "2022-datacenter-azure-edition"
-          exactVersion = "20348.5499.260809"
+          # publisher    = "MicrosoftWindowsServer"
+          # offer        = "WindowsServer"
+          # sku          = "2022-datacenter-azure-edition"
+          # exactVersion = "20348.5499.260809"
+          publisher    = "MicrosoftWindowsDesktop"   # Windows 11 AVD image retained for reference.
+          offer        = "windows-11"
+          sku          = "win11-25h2-avd"
+          exactVersion = "26200.9168.260809"
+        }
         }
       }
 
