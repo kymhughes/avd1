@@ -116,7 +116,7 @@ resource "azurerm_resource_group_template_deployment" "aib" {
       value = var.image_template_name
     },
     "api-version" = {
-      value = var.aib_api_version
+      value = "2024-02-01"
     }
     "svclocation" = {
       value = var.aib_region

@@ -18,4 +18,3 @@ vnet_name                        = "vnet-itm-vnet-npd"
 tags = {
   project = "Custom-Image-Builder-Demo"
 }
-

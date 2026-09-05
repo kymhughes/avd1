@@ -77,12 +77,6 @@ variable "aib_container_instance_subnet_id" {
   default     = ""
 }
 
-variable "aib_api_version" {
-  type        = string
-  description = "Image builder API version"
-  default     = "2022-02-14"
-}
-
 variable "optimization_script_uri" {
   type        = string
   description = "URI for the PowerShell script used by Azure Image Builder to optimize the image"
