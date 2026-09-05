@@ -61,16 +61,8 @@ resource "azurerm_policy_definition" "assign_session_host_uami" {
 
   policy_rule = jsonencode({
     if = {
-      allOf = [
-        {
-          field  = "type"
-          equals = "Microsoft.Compute/virtualMachines"
-        },
-        {
-          field = "tags['workload']"
-          in    = var.session_host_uami_workloads
-        }
-      ]
+      field  = "type"
+      equals = "Microsoft.Compute/virtualMachines"
     }
     then = {
       effect = "[parameters('effect')]"
@@ -106,7 +98,7 @@ resource "azurerm_resource_group_policy_assignment" "assign_session_host_uami" {
   policy_definition_id = azurerm_policy_definition.assign_session_host_uami[0].id
   location             = var.avdLocation
   display_name         = "Assign managed identity to ${each.value.name} session hosts"
-  description          = "Assigns ${var.session_host_uami_name} to AVD session host VMs with matching workload tags."
+  description          = "Assigns ${var.session_host_uami_name} to VMs in the pool resource group."
 
   identity {
     type = "SystemAssigned"
@@ -125,6 +117,152 @@ resource "azurerm_role_assignment" "session_host_uami_policy_vm_contributor" {
   scope                = data.azurerm_resource_group.compute[each.key].id
   role_definition_name = "Virtual Machine Contributor"
   principal_id         = azurerm_resource_group_policy_assignment.assign_session_host_uami[each.key].identity[0].principal_id
+
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_policy_definition" "deploy_session_host_bootstrap_extension" {
+  for_each = local.bootstrap_host_pools
+
+  name         = "deploy-avd-session-host-bootstrap-${each.key}"
+  policy_type  = "Custom"
+  mode         = "Indexed"
+  display_name = "Deploy bootstrap extension to ${each.value.name} session hosts"
+  description  = "Deploys Custom Script Extension to ${each.value.name} session host VMs. The script uses the assigned UAMI to download bootstrap content from private blob storage."
+
+  parameters = jsonencode({
+    effect = {
+      type          = "String"
+      defaultValue  = "DeployIfNotExists"
+      allowedValues = ["DeployIfNotExists", "AuditIfNotExists", "Disabled"]
+      metadata = {
+        displayName = "Effect"
+        description = "Use DeployIfNotExists to deploy the bootstrap extension, AuditIfNotExists to report only, or Disabled to turn off this policy."
+      }
+    }
+  })
+
+  policy_rule = jsonencode({
+    if = {
+      field  = "type"
+      equals = "Microsoft.Compute/virtualMachines"
+    }
+    then = {
+      effect = "[parameters('effect')]"
+      details = {
+        type = "Microsoft.Compute/virtualMachines/extensions"
+        name = "[concat(field('name'), '/${var.session_host_bootstrap_extension_name}')]"
+        roleDefinitionIds = [
+          "/providers/Microsoft.Authorization/roleDefinitions/9980e02c-c2be-4d73-94e8-173b1dc7cf3c"
+        ]
+        existenceCondition = {
+          allOf = [
+            {
+              field  = "Microsoft.Compute/virtualMachines/extensions/publisher"
+              equals = "Microsoft.Compute"
+            },
+            {
+              field  = "Microsoft.Compute/virtualMachines/extensions/type"
+              equals = "CustomScriptExtension"
+            },
+            {
+              field  = "Microsoft.Compute/virtualMachines/extensions/provisioningState"
+              equals = "Succeeded"
+            }
+          ]
+        }
+        deployment = {
+          properties = {
+            mode = "incremental"
+            parameters = {
+              vmName = {
+                value = "[field('name')]"
+              }
+              location = {
+                value = "[field('location')]"
+              }
+              extensionName = {
+                value = var.session_host_bootstrap_extension_name
+              }
+              commandToExecute = {
+                value = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; $root = 'C:\\ProgramData\\AVD-Bootstrap'; New-Item -ItemType Directory -Force -Path $root | Out-Null; $token = $null; for ($i = 1; $i -le 30 -and -not $token; $i++) { try { $token = Invoke-RestMethod -Headers @{ Metadata = 'true' } -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://storage.azure.com/&client_id=${azurerm_user_assigned_identity.session_hosts[0].client_id}' -TimeoutSec 10 } catch { Start-Sleep -Seconds 20 } }; if (-not $token) { throw 'Managed identity token was not available.' }; $headers = @{ Authorization = ('Bearer ' + $token.access_token); 'x-ms-version' = '2023-11-03' }; $scriptPath = Join-Path $root 'bootstrap.ps1'; Invoke-WebRequest -Uri '${each.value.bootstrap_script_url}' -Headers $headers -OutFile $scriptPath; & powershell.exe -ExecutionPolicy Bypass -NoProfile -File $scriptPath\""
+              }
+            }
+            template = {
+              "$schema"      = "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#"
+              contentVersion = "1.0.0.0"
+              parameters = {
+                vmName = {
+                  type = "string"
+                }
+                location = {
+                  type = "string"
+                }
+                extensionName = {
+                  type = "string"
+                }
+                commandToExecute = {
+                  type = "string"
+                }
+              }
+              resources = [
+                {
+                  type       = "Microsoft.Compute/virtualMachines/extensions"
+                  apiVersion = "2023-09-01"
+                  name       = "[concat(parameters('vmName'), '/', parameters('extensionName'))]"
+                  location   = "[parameters('location')]"
+                  properties = {
+                    publisher               = "Microsoft.Compute"
+                    type                    = "CustomScriptExtension"
+                    typeHandlerVersion      = "1.10"
+                    autoUpgradeMinorVersion = true
+                    settings = {
+                      commandToExecute = "[parameters('commandToExecute')]"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  })
+}
+
+resource "azurerm_resource_group_policy_assignment" "deploy_session_host_bootstrap_extension" {
+  for_each = local.bootstrap_host_pools
+
+  name                 = "pa-avd-bootstrap-${each.key}"
+  resource_group_id    = data.azurerm_resource_group.compute[each.key].id
+  policy_definition_id = azurerm_policy_definition.deploy_session_host_bootstrap_extension[each.key].id
+  location             = var.avdLocation
+  display_name         = "Deploy bootstrap extension to ${each.value.name} session hosts"
+  description          = "Deploys Custom Script Extension to VMs in the pool resource group."
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  parameters = jsonencode({
+    effect = {
+      value = "DeployIfNotExists"
+    }
+  })
+
+  depends_on = [
+    azurerm_resource_group_policy_assignment.assign_session_host_uami,
+    azurerm_role_assignment.session_host_uami_policy_vm_contributor,
+    azurerm_role_assignment.session_hosts_blob_reader
+  ]
+}
+
+resource "azurerm_role_assignment" "session_host_bootstrap_policy_vm_contributor" {
+  for_each = local.bootstrap_host_pools
+
+  scope                = data.azurerm_resource_group.compute[each.key].id
+  role_definition_name = "Virtual Machine Contributor"
+  principal_id         = azurerm_resource_group_policy_assignment.deploy_session_host_bootstrap_extension[each.key].identity[0].principal_id
 
   skip_service_principal_aad_check = true
 }
@@ -181,6 +319,7 @@ locals {
     app_group_default_desktop_display_name = null
     app_group_type                         = null
     remote_apps                            = []
+    bootstrap_script_url                   = null
     hostpool_type                          = null
     hostpool_load_balancer_type            = null
     hostpool_maximum_sessions_allowed      = null
@@ -237,6 +376,11 @@ locals {
       })
     ] if coalesce(host_pool.app_group_type, var.app_group_type) == "RemoteApp"
   ])
+
+  bootstrap_host_pools = {
+    for name, host_pool in local.host_pools : name => host_pool
+    if var.enable_session_host_bootstrap_extension_policy && host_pool.bootstrap_script_url != null
+  }
 }
 
 data "azuread_group" "avd_users" {

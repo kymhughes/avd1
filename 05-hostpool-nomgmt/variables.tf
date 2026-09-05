@@ -123,16 +123,22 @@ variable "session_host_uami_name" {
   default     = null
 }
 
-variable "session_host_uami_workloads" {
-  type        = list(string)
-  description = "VM workload tag values used by the managed identity assignment policy to match AVD-created session hosts."
-  default     = []
-}
-
 variable "session_host_uami_storage_scope" {
   type        = string
   description = "Optional Azure resource ID scope where the session host managed identity receives Storage Blob Data Reader."
   default     = null
+}
+
+variable "enable_session_host_bootstrap_extension_policy" {
+  type        = bool
+  description = "Create an Azure Policy assignment that deploys Custom Script Extension to matching AVD-created session host VMs."
+  default     = false
+}
+
+variable "session_host_bootstrap_extension_name" {
+  type        = string
+  description = "Name of the Custom Script Extension deployed to AVD-created session host VMs."
+  default     = "AVDBootstrap"
 }
 
 variable "scheduled_agent_updates" {
