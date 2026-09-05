@@ -77,6 +77,18 @@ variable "aib_container_instance_subnet_id" {
   default     = ""
 }
 
+variable "aib_vm_size" {
+  type        = string
+  description = "VM size used by Azure Image Builder for the temporary build VM."
+  default     = "Standard_D4s_v5"
+}
+
+variable "aib_os_disk_size_gb" {
+  type        = number
+  description = "OS disk size in GB used by Azure Image Builder for the temporary build VM."
+  default     = 127
+}
+
 variable "optimization_script_uri" {
   type        = string
   description = "URI for the PowerShell script used by Azure Image Builder to optimize the image"

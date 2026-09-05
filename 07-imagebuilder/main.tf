@@ -116,7 +116,7 @@ resource "azurerm_resource_group_template_deployment" "aib" {
       value = var.image_template_name
     },
     "api-version" = {
-      value = "2024-02-01"
+      value = "2025-10-01"
     }
     "svclocation" = {
       value = var.aib_region
@@ -163,8 +163,8 @@ resource "azurerm_resource_group_template_deployment" "aib" {
           "buildTimeoutInMinutes": 120,
   
           "vmProfile": {
-            "vmSize": "Standard_D2s_v5",
-            "osDiskSizeGB": 127%{if var.aib_subnet_id != ""},
+            "vmSize": "${var.aib_vm_size}",
+            "osDiskSizeGB": ${var.aib_os_disk_size_gb}%{if var.aib_subnet_id != ""},
             "vnetConfig": {
               "subnetId": "${var.aib_subnet_id}"%{if var.aib_container_instance_subnet_id != ""},
               "containerInstanceSubnetId": "${var.aib_container_instance_subnet_id}"%{endif}
@@ -193,7 +193,7 @@ resource "azurerm_resource_group_template_deployment" "aib" {
               "type": "WindowsUpdate",
               "searchCriteria": "IsInstalled=0",
               "filters": ["exclude:$_.Title -like '*Preview*'", "include:$true"],
-              "updateLimit": 40
+              "updateLimit": 20
             }
           ],
           "distribute": [

@@ -1,6 +1,8 @@
 aib_region                = "eastus"
 aib_subnet_id             = ""
 aib_container_instance_subnet_id = ""
+aib_vm_size               = "Standard_D4s_v5"
+aib_os_disk_size_gb       = 127
 image_replication_regions = ["eastus"]
 location                  = "eastus"
 offer                     = "WindowsServer"
