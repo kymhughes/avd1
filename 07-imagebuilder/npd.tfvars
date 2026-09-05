@@ -1,7 +1,7 @@
 aib_region                       = "australiaeast"
 aib_rg                           = "rg-imagebuilder"
 aib_subnet_id                    = "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd23faad9e/resourceGroups/rg-itm-network-npd/providers/Microsoft.Network/virtualNetworks/vnet-itm-vnet-npd/subnets/snet-ib1-vms"
-aib_container_instance_subnet_id = "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd23faad9e/resourceGroups/rg-itm-network-npd/providers/Microsoft.Network/virtualNetworks/vnet-itm-vnet-npd/subnets/net-ib2-tools"
+aib_container_instance_subnet_id = "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd23faad9e/resourceGroups/rg-itm-network-npd/providers/Microsoft.Network/virtualNetworks/vnet-itm-vnet-npd/subnets/snet-ib2-tools"
 image_replication_regions        = ["australiaeast"]
 location                         = "australiaeast"
 offer                            = "WindowsServer"
