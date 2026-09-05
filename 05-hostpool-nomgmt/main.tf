@@ -29,7 +29,7 @@ data "azurerm_private_dns_zone" "avd_feed_dns" {
 resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
   for_each = local.host_pools
 
-  scope                = azurerm_resource_group.compute[each.key].id
+  scope                = data.azurerm_resource_group.compute[each.key].id
   role_definition_name = "Desktop Virtualization Virtual Machine Contributor"
   principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
 }
@@ -138,12 +138,51 @@ data "azuread_group" "avd_users" {
   security_enabled = true
 }
 
-resource "azurerm_resource_group" "compute" {
+resource "terraform_data" "compute_resource_group" {
   for_each = local.host_pools
 
-  location = var.avdLocation
-  name     = coalesce(each.value.resource_group_name, "rg-${each.value.name}-${var.environment}")
-  tags     = each.value.tags
+  input = {
+    name = coalesce(each.value.resource_group_name, "rg-${each.value.name}-${var.environment}")
+    body = jsonencode({
+      location = var.avdLocation
+      tags     = each.value.tags
+    })
+  }
+
+  triggers_replace = [
+    coalesce(each.value.resource_group_name, "rg-${each.value.name}-${var.environment}"),
+    var.avdLocation,
+    jsonencode(each.value.tags)
+  ]
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+      az rest \
+        --method put \
+        --url "https://management.azure.com/subscriptions/${var.spoke_subscription_id}/resourceGroups/${self.input.name}?api-version=2021-04-01" \
+        --headers "Content-Type=application/json" \
+        --body '${self.input.body}'
+    EOT
+  }
+}
+
+data "azurerm_resource_group" "compute" {
+  for_each = local.host_pools
+
+  name = terraform_data.compute_resource_group[each.key].input.name
+
+  depends_on = [
+    terraform_data.compute_resource_group
+  ]
+}
+
+removed {
+  from = azurerm_resource_group.compute
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 resource "azapi_resource" "host_pool" {
@@ -152,7 +191,7 @@ resource "azapi_resource" "host_pool" {
   type      = "Microsoft.DesktopVirtualization/hostPools@2026-04-01-preview"
   name      = each.value.name
   location  = var.avdLocation
-  parent_id = azurerm_resource_group.compute[each.key].id
+  parent_id = data.azurerm_resource_group.compute[each.key].id
   tags      = each.value.tags
 
   identity {
@@ -280,7 +319,7 @@ resource "azurerm_virtual_desktop_application_group" "this" {
 
   name                         = each.value.app_group_name
   location                     = var.avdLocation
-  resource_group_name          = azurerm_resource_group.compute[each.key].name
+  resource_group_name          = data.azurerm_resource_group.compute[each.key].name
   type                         = coalesce(each.value.app_group_type, var.app_group_type)
   host_pool_id                 = azapi_resource.host_pool[each.key].id
   default_desktop_display_name = coalesce(each.value.app_group_type, var.app_group_type) == "Desktop" ? coalesce(each.value.app_group_default_desktop_display_name, var.app_group_default_desktop_display_name) : null
@@ -315,7 +354,7 @@ resource "azurerm_role_assignment" "avd_users" {
 resource "azurerm_role_assignment" "avd_users_vm_login" {
   for_each = local.host_pools
 
-  scope                = azurerm_resource_group.compute[each.key].id
+  scope                = data.azurerm_resource_group.compute[each.key].id
   role_definition_name = "Virtual Machine User Login"
   principal_id         = data.azuread_group.avd_users[each.key].object_id
 }
@@ -334,7 +373,7 @@ resource "azurerm_private_endpoint" "hostpool_connection" {
   }
 
   name                = "pe-avd-hp-${each.value.name}"
-  resource_group_name = azurerm_resource_group.compute[each.key].name
+  resource_group_name = data.azurerm_resource_group.compute[each.key].name
   location            = var.avdLocation
   subnet_id           = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${coalesce(each.value.hostpool_private_endpoint_subnet_name, each.value.session_host_subnet_name, var.hostpool_private_endpoint_subnet_name)}"
   tags                = each.value.tags
@@ -367,7 +406,7 @@ resource "azapi_resource" "dynamic_scaling_plan" {
   type      = "Microsoft.DesktopVirtualization/scalingPlans@2026-04-01-preview"
   name      = coalesce(each.value.scaling_plan_name, var.scaling_plan_name, "sp-${each.value.name}")
   location  = var.avdLocation
-  parent_id = azurerm_resource_group.compute[each.key].id
+  parent_id = data.azurerm_resource_group.compute[each.key].id
   tags      = each.value.tags
 
   body = {
