@@ -8,6 +8,11 @@ variable "aib_rg" {
   description = "Resource group for the Azure Image Builder"
 }
 
+variable "aib_user_assigned_identity_id" {
+  type        = string
+  description = "Existing user-assigned managed identity ID used by Azure Image Builder."
+}
+
 variable "tags" {
   description = "Tags to be used for this resource deployment."
   type        = map(any)
@@ -35,14 +40,9 @@ variable "source_image_version" {
   default     = "latest"
 }
 
-variable "compute_gallery_name" {
+variable "destination_gallery_image_id" {
   type        = string
-  description = "Azure Compute Gallery name for the image output."
-}
-
-variable "gallery_image_definition_name" {
-  type        = string
-  description = "Azure Compute Gallery image definition name for the image output."
+  description = "Existing Azure Compute Gallery image definition ID where Azure Image Builder publishes image versions."
 }
 
 variable "image_template_name" {
@@ -92,13 +92,4 @@ variable "aib_os_disk_size_gb" {
 variable "optimization_script_uri" {
   type        = string
   description = "URI for the PowerShell script used by Azure Image Builder to optimize the image"
-}
-variable "rg_network" {
-  type        = string
-  description = "Network resource group name."
-}
-
-variable "vnet_name" {
-  type        = string
-  description = "Spoke virtual network name."
 }
