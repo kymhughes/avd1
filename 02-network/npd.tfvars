@@ -3,7 +3,7 @@ vnet_name  = "vnet-itm-vnet-npd"
 
 subnets = {
   "snet-itm-001" = {
-    name                              = "itm001"
+    firewall                          = "172.17.0.36"
     address_prefixes                  = ["172.17.100.0/28"]
     private_subnet_enabled            = true
     private_endpoint_network_policies = "Disabled"
@@ -33,6 +33,7 @@ subnets = {
   }
 
   "snet-itm-001-pe" = {
+    firewall                          = "172.17.0.36"
     address_prefixes                  = ["172.17.101.0/28"]
     private_subnet_enabled            = true
     private_endpoint_network_policies = "Enabled"
@@ -53,7 +54,7 @@ subnets = {
   }
 
   "snet-itm-002" = {
-    name                              = "itm002"
+    firewall                          = "172.17.0.36"
     address_prefixes                  = ["172.17.100.16/28"]
     private_subnet_enabled            = true
     private_endpoint_network_policies = "Disabled"
@@ -83,6 +84,7 @@ subnets = {
   }
 
   "snet-itm-002-pe" = {
+    firewall                          = "172.17.0.36"
     address_prefixes                  = ["172.17.101.16/28"]
     private_subnet_enabled            = true
     private_endpoint_network_policies = "Enabled"
@@ -90,7 +92,7 @@ subnets = {
   }
 
   "snet-general-pe" = {
-    name                              = "general"
+    firewall                          = "172.17.0.36"
     address_prefixes                  = ["172.17.100.240/28"]
     private_subnet_enabled            = true
     private_endpoint_network_policies = "Enabled"
@@ -119,7 +121,7 @@ subnets = {
     }
   }
   "snet-ib1-vms" = {
-    name                                          = "ib1-vms"
+    firewall                                      = "172.17.0.36"
     address_prefixes                              = ["172.17.100.192/28"]
     private_subnet_enabled                        = true
     private_endpoint_network_policies             = "Disabled"
@@ -140,7 +142,7 @@ subnets = {
     }
   }
   "snet-ib2-tools" = {
-    name                                          = "ib2-tools"
+    firewall                                      = "172.17.0.36"
     address_prefixes                              = ["172.17.100.224/28"]
     private_subnet_enabled                        = true
     private_endpoint_network_policies             = "Disabled"

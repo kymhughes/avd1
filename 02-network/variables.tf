@@ -20,9 +20,10 @@ variable "vnet_name" {
 }
 
 variable "subnets" {
-  description = "Subnets to create, with optional NSG creation and security rules."
+  description = "Subnets to create, with optional NSG creation, security rules, and firewall forced routing."
   type = map(object({
     address_prefixes  = list(string)
+    Firewall          = optional(string)
     name              = optional(string)
     service_endpoints = optional(list(string), [])
 
@@ -84,5 +85,13 @@ variable "subnets" {
       try(length(subnet.nsg.security_rules) == 0 || subnet.nsg.create, true)
     ])
     error_message = "security_rules can only be set when the subnet NSG create option is true."
+  }
+
+  validation {
+    condition = alltrue([
+      for _, subnet in var.subnets :
+      try(trimspace(subnet.Firewall), "") == "" || can(cidrhost("${subnet.Firewall}/32", 0))
+    ])
+    error_message = "Firewall must be a valid IPv4 address when specified."
   }
 }

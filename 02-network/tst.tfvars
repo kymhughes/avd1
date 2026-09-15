@@ -3,7 +3,6 @@ vnet_name  = "vnet-itm-vnet-tst"
 
 subnets = {
   "snet-itm-001" = {
-    name                              = "itm001"
     address_prefixes                  = ["172.17.110.0/28"]
     private_subnet_enabled            = true
     private_endpoint_network_policies = "Disabled"
@@ -53,7 +52,6 @@ subnets = {
   }
 
   "snet-itm-002" = {
-    name                              = "itm002"
     address_prefixes                  = ["172.17.110.16/28"]
     private_subnet_enabled            = true
     private_endpoint_network_policies = "Disabled"
@@ -68,7 +66,6 @@ subnets = {
   }
 
   "snet-general-pe" = {
-    name                              = "general"
     address_prefixes                  = ["172.17.110.240/28"]
     private_subnet_enabled            = true
     private_endpoint_network_policies = "Enabled"
