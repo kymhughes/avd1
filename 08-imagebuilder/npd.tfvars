@@ -14,7 +14,7 @@ source_image_version             = "latest"
 destination_gallery_image_id     = "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd23faad9e/resourceGroups/rg-imagebuilder/providers/Microsoft.Compute/galleries/avd_image_gallery/images/winserver2022-002"
 image_template_name              = "winserver2022-template"
 run_output_name                  = "winserver2022-img"
-optimization_script_uri          = "https://stgenitmnpd002.blob.core.windows.net/data/Optimize_OS_for_AVD.ps1"
+optimization_script_uri          = "https://stgenitmnpd001.blob.core.windows.net/data/Optimize_OS_for_AVD.ps1"
 tags = {
   project = "Custom-Image-Builder-Demo"
 }
