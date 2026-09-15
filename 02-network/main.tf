@@ -51,8 +51,8 @@ resource "azurerm_network_security_group" "subnet" {
 
 locals {
   subnet_firewall_routes = {
-    for subnet_key, subnet in var.subnets : subnet_key => trimspace(subnet.Firewall)
-    if try(trimspace(subnet.Firewall), "") != ""
+    for subnet_key, subnet in var.subnets : subnet_key => trimspace(subnet.firewall)
+    if try(trimspace(subnet.firewall), "") != ""
   }
 
   subnet_nsg_associations = {
