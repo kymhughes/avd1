@@ -22,7 +22,7 @@ host_pools = [
     scaling_plan_description               = "Default dynamic autoscale plan for ITM001 NPD."
     session_host_subnet_name               = "snet-itm-001"
     hostpool_private_endpoint_subnet_name  = "snet-itm-001-pe"
-    #custom_configuration_script_url        = "https://stgenitmnpd001.blob.core.windows.net/data/bootstrap-itm001.ps1"
+    custom_configuration_script_url        = "https://tfstore101.blob.core.windows.net/data/bootstrap-itm001.ps1"
     session_host_configuration = {
       friendlyName = "ITM001 NPD session hosts"
       vmLocation   = "australiaeast"
@@ -32,14 +32,14 @@ host_pools = [
       imageInfo = {
         type = "Marketplace"
         marketplaceInfo = {
-          # publisher    = "MicrosoftWindowsServer"
-          # offer        = "WindowsServer"
-          # sku          = "2022-datacenter-azure-edition"
-          # exactVersion = "20348.5499.260809"
-          publisher    = "MicrosoftWindowsDesktop" # Windows 11 AVD image retained for reference.
-          offer        = "windows-11"
-          sku          = "win11-25h2-avd"
-          exactVersion = "26200.9168.260809"
+          publisher    = "MicrosoftWindowsServer"
+          offer        = "WindowsServer"
+          sku          = "2022-datacenter-azure-edition"
+          exactVersion = "20348.5499.260809"
+          # publisher    = "MicrosoftWindowsDesktop" # Windows 11 AVD image retained for reference.
+          # offer        = "windows-11"
+          # sku          = "win11-25h2-avd"
+          # exactVersion = "26200.9168.260809"
         }
       }
 
