@@ -8,12 +8,6 @@ variable "tenant_id" {
   description = "Azure tenant ID."
 }
 
-variable "prefix" {
-  type        = string
-  description = "Short prefix for resource naming."
-  default     = null
-}
-
 variable "environment" {
   type        = string
   description = "Environment name."
@@ -36,12 +30,6 @@ variable "tags" {
   default     = {}
 }
 
-variable "enable_telemetry" {
-  type        = bool
-  description = "Enable telemetry for AVM modules."
-  default     = true
-}
-
 variable "hub_dns_zone_rg" {
   type        = string
   description = "Hub resource group containing private DNS zones."
@@ -51,17 +39,6 @@ variable "hub_dns_zone_rg" {
 variable "rg_so" {
   type        = string
   description = "Service objects resource group name."
-}
-
-variable "rg_pool" {
-  type        = string
-  description = "Fallback host pool compute resource group name."
-}
-
-variable "hostpool_name" {
-  type        = string
-  description = "AVD host pool name."
-  default     = null
 }
 
 variable "hostpool_type" {
@@ -100,12 +77,6 @@ variable "hostpool_custom_rdp_properties" {
   default     = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
 }
 
-variable "host_pool_vm_template" {
-  type        = any
-  description = "Default session host configuration for automated host pools."
-  default     = null
-}
-
 variable "session_host_disk_info" {
   type        = any
   description = "Default diskInfo block for automated session host configurations. Individual host pools can override this in session_host_configuration.diskInfo."
@@ -124,12 +95,6 @@ variable "session_host_security_info" {
     secureBootEnabled = true
     vTpmEnabled       = true
   }
-}
-
-variable "enable_session_host_encryption_at_host_policy" {
-  type        = bool
-  description = "Assign an Azure Policy modify rule to the session host resource groups so AVD-created VMs have encryption at host enabled at creation time."
-  default     = true
 }
 
 variable "session_host_boot_diagnostics_info" {
@@ -168,24 +133,6 @@ variable "scheduled_agent_updates" {
       }
     ]
   }
-}
-
-variable "create_registration_token" {
-  type        = bool
-  description = "Create a host pool registration token for session host deployment."
-  default     = true
-}
-
-variable "registration_token_ttl" {
-  type        = string
-  description = "TTL for the generated registration token."
-  default     = "24h"
-}
-
-variable "app_group_name" {
-  type        = string
-  description = "Desktop application group name."
-  default     = null
 }
 
 variable "app_group_type" {

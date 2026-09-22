@@ -14,12 +14,7 @@ terraform {
       version = "~> 3.9.0"
     }
   }
-  # backend "azurerm" {
-  #   resource_group_name  = "rg-terraform-state"
-  #   storage_account_name = "sttfstate<suffix>"
-  #   container_name       = "tfstate"
-  #   key                  = "avd/05-avd-hostpool.tfstate"
-  # }
+
 }
 
 provider "azurerm" {
