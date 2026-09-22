@@ -50,9 +50,9 @@ resource "azurerm_network_security_group" "subnet" {
 
 
 locals {
-  subnet_firewall_routes = {
-    for subnet_key, subnet in var.subnets : subnet_key => trimspace(subnet.firewall)
-    if try(trimspace(subnet.firewall), "") != ""
+  subnet_route_table_names = {
+    for subnet_key, subnet in var.subnets : subnet_key => trimspace(subnet.route_table_name)
+    if try(trimspace(subnet.route_table_name), "") != ""
   }
 
   subnet_nsg_associations = {
@@ -74,28 +74,18 @@ locals {
   }
 }
 
-resource "azurerm_route_table" "firewall" {
-  for_each = local.subnet_firewall_routes
+data "azurerm_route_table" "subnet" {
+  for_each = toset(values(local.subnet_route_table_names))
 
-  name                          = "rt-${each.key}"
-  location                      = var.avdLocation
-  resource_group_name           = var.rg_network
-  bgp_route_propagation_enabled = false
-  tags                          = var.tags
-
-  route {
-    name                   = "default-to-firewall"
-    address_prefix         = "0.0.0.0/0"
-    next_hop_type          = "VirtualAppliance"
-    next_hop_in_ip_address = each.value
-  }
+  name                = each.key
+  resource_group_name = var.rg_network
 }
 
-resource "azurerm_subnet_route_table_association" "firewall" {
-  for_each = local.subnet_firewall_routes
+resource "azurerm_subnet_route_table_association" "this" {
+  for_each = local.subnet_route_table_names
 
   subnet_id      = azurerm_subnet.this[each.key].id
-  route_table_id = azurerm_route_table.firewall[each.key].id
+  route_table_id = data.azurerm_route_table.subnet[each.value].id
 }
 
 

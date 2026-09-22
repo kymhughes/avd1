@@ -54,9 +54,10 @@ resource "azurerm_virtual_network_peering" "hub_to_spoke" {
 }
 
 resource "azurerm_route_table" "this" {
-  name                = "rt-${var.vnet_name}"
-  location            = var.avdLocation
-  resource_group_name = azurerm_resource_group.net.name
+  name                          = "rt-${var.vnet_name}"
+  location                      = var.avdLocation
+  resource_group_name           = azurerm_resource_group.net.name
+  bgp_route_propagation_enabled = false
 }
 
 resource "azurerm_route" "default_to_firewall" {
