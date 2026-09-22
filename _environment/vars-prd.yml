@@ -1,5 +1,4 @@
 variables:
-  azureServiceConnection: sp-avd-lab-prd
   deploymentSubscriptionId: 00000000-0000-0000-0000-000000000000
   stateSubscriptionId: 00000000-0000-0000-0000-000000000000
   backendResourceGroupName: rg-tfstore-prd

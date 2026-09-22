@@ -4,42 +4,49 @@ parameters:
   deployNpd: true
   deployTst: false
   deployPrd: false
+  npdAzureServiceConnection: sp-avd-lab
+  tstAzureServiceConnection: sp-avd-lab-tst
+  prdAzureServiceConnection: sp-avd-lab-prd
 
 stages:
-  - template: terraform-plan-apply.yml
-    parameters:
-      stageName: NPD
-      environmentName: npd
-      variableTemplate: ../_environment/vars-npd.yml
-      doDestroy: ${{ parameters.doDestroy }}
-      backendStateKey: npd-${{ parameters.tfFolder }}.tfstate
-      terraformCommonVarFile: ../_environment/npd.tfvars
-      terraformVarFile: npd.tfvars
-      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/${{ parameters.tfFolder }}
-      runStage: ${{ parameters.deployNpd }}
+  - ${{ if eq(parameters.deployNpd, true) }}:
+      - template: terraform-plan-apply.yml
+        parameters:
+          stageName: NPD
+          environmentName: npd
+          variableTemplate: ../_environment/vars-npd.yml
+          azureServiceConnection: ${{ parameters.npdAzureServiceConnection }}
+          doDestroy: ${{ parameters.doDestroy }}
+          backendStateKey: npd-${{ parameters.tfFolder }}.tfstate
+          terraformCommonVarFile: ../_environment/npd.tfvars
+          terraformVarFile: npd.tfvars
+          terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/${{ parameters.tfFolder }}
+          runStage: true
 
-  - template: terraform-plan-apply.yml
-    parameters:
-      stageName: TST
-      environmentName: tst
-      variableTemplate: ../_environment/vars-tst.yml
-      dependsOn: NPD
-      doDestroy: ${{ parameters.doDestroy }}
-      backendStateKey: tst-${{ parameters.tfFolder }}.tfstate
-      terraformCommonVarFile: ../_environment/tst.tfvars
-      terraformVarFile: tst.tfvars
-      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/${{ parameters.tfFolder }}
-      runStage: ${{ parameters.deployTst }}
+  - ${{ if eq(parameters.deployTst, true) }}:
+      - template: terraform-plan-apply.yml
+        parameters:
+          stageName: TST
+          environmentName: tst
+          variableTemplate: ../_environment/vars-tst.yml
+          azureServiceConnection: ${{ parameters.tstAzureServiceConnection }}
+          doDestroy: ${{ parameters.doDestroy }}
+          backendStateKey: tst-${{ parameters.tfFolder }}.tfstate
+          terraformCommonVarFile: ../_environment/tst.tfvars
+          terraformVarFile: tst.tfvars
+          terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/${{ parameters.tfFolder }}
+          runStage: true
 
-  - template: terraform-plan-apply.yml
-    parameters:
-      stageName: PRD
-      environmentName: prd
-      variableTemplate: ../_environment/vars-prd.yml
-      dependsOn: TST
-      doDestroy: ${{ parameters.doDestroy }}
-      backendStateKey: prd-${{ parameters.tfFolder }}.tfstate
-      terraformCommonVarFile: ../_environment/prd.tfvars
-      terraformVarFile: prd.tfvars
-      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/${{ parameters.tfFolder }}
-      runStage: ${{ parameters.deployPrd }}
+  - ${{ if eq(parameters.deployPrd, true) }}:
+      - template: terraform-plan-apply.yml
+        parameters:
+          stageName: PRD
+          environmentName: prd
+          variableTemplate: ../_environment/vars-prd.yml
+          azureServiceConnection: ${{ parameters.prdAzureServiceConnection }}
+          doDestroy: ${{ parameters.doDestroy }}
+          backendStateKey: prd-${{ parameters.tfFolder }}.tfstate
+          terraformCommonVarFile: ../_environment/prd.tfvars
+          terraformVarFile: prd.tfvars
+          terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/${{ parameters.tfFolder }}
+          runStage: true
