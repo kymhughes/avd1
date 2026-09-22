@@ -1,0 +1,45 @@
+parameters:
+  tfFolder: ''
+  doDestroy: false
+  deployNpd: true
+  deployTst: false
+  deployPrd: false
+
+stages:
+  - template: terraform-plan-apply.yml
+    parameters:
+      stageName: NPD
+      environmentName: npd
+      variableTemplate: ../_environment/vars-npd.yml
+      doDestroy: ${{ parameters.doDestroy }}
+      backendStateKey: npd-${{ parameters.tfFolder }}.tfstate
+      terraformCommonVarFile: ../_environment/npd.tfvars
+      terraformVarFile: npd.tfvars
+      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/${{ parameters.tfFolder }}
+      runStage: ${{ parameters.deployNpd }}
+
+  - template: terraform-plan-apply.yml
+    parameters:
+      stageName: TST
+      environmentName: tst
+      variableTemplate: ../_environment/vars-tst.yml
+      dependsOn: NPD
+      doDestroy: ${{ parameters.doDestroy }}
+      backendStateKey: tst-${{ parameters.tfFolder }}.tfstate
+      terraformCommonVarFile: ../_environment/tst.tfvars
+      terraformVarFile: tst.tfvars
+      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/${{ parameters.tfFolder }}
+      runStage: ${{ parameters.deployTst }}
+
+  - template: terraform-plan-apply.yml
+    parameters:
+      stageName: PRD
+      environmentName: prd
+      variableTemplate: ../_environment/vars-prd.yml
+      dependsOn: TST
+      doDestroy: ${{ parameters.doDestroy }}
+      backendStateKey: prd-${{ parameters.tfFolder }}.tfstate
+      terraformCommonVarFile: ../_environment/prd.tfvars
+      terraformVarFile: prd.tfvars
+      terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/${{ parameters.tfFolder }}
+      runStage: ${{ parameters.deployPrd }}

@@ -1,12 +1,11 @@
 variable "avdLocation" {
   type        = string
-  description = "Azure region"
+  description = "Azure region."
 }
 
 variable "tenant_id" {
   type        = string
   description = "Azure tenant ID."
-  default     = null
 }
 
 variable "prefix" {
@@ -17,18 +16,18 @@ variable "prefix" {
 
 variable "environment" {
   type        = string
-  description = "Compatibility variable for shared environment tfvars."
+  description = "Environment name."
   default     = null
 }
 
 variable "spoke_subscription_id" {
   type        = string
-  description = "Spoke subscription ID"
+  description = "Spoke subscription ID."
 }
 
 variable "hub_subscription_id" {
   type        = string
-  description = "Hub subscription ID"
+  description = "Hub subscription ID."
 }
 
 variable "tags" {
@@ -45,7 +44,7 @@ variable "enable_telemetry" {
 
 variable "rg_storage_name" {
   type        = string
-  description = "Storage RG name (from module 01: rg_storage_name)"
+  description = "Resource group that contains the storage accounts."
 }
 
 variable "rg_network" {
@@ -60,26 +59,26 @@ variable "vnet_name" {
 
 variable "pesubnet_files" {
   type        = string
-  description = "Azure Files private endpoint subnet name."
+  description = "Private endpoint subnet name."
 }
 
 variable "hub_dns_zone_rg" {
   type        = string
-  description = "Hub resource group for private DNS zones"
+  description = "Hub resource group for private DNS zones."
 }
 
 variable "active_directory_domain_name" {
   type        = string
   default     = null
   nullable    = true
-  description = "Optional AD DS DNS domain name applied to all storage accounts for hybrid Microsoft Entra Kerberos ACL management."
+  description = "Optional AD DS DNS domain name for Azure Files identity authentication."
 }
 
 variable "active_directory_domain_guid" {
   type        = string
   default     = null
   nullable    = true
-  description = "Optional AD DS domain object GUID applied to all storage accounts for hybrid Microsoft Entra Kerberos ACL management."
+  description = "Optional AD DS domain object GUID for Azure Files identity authentication."
 
   validation {
     condition = (
@@ -90,100 +89,76 @@ variable "active_directory_domain_guid" {
   }
 }
 
-variable "storage_accounts" {
-  description = "Storage accounts, Azure Files shares, private endpoint names, and share RBAC assignments."
-  type = map(object({
-    name                                 = string
-    managed_identity_name                = string
-    kind                                 = string
-    sku_name                             = string
-    identity_auth_directory_service      = optional(string)
-    file_private_endpoint_enabled        = optional(bool)
-    private_endpoint_name                = optional(string)
-    private_service_connection_name      = optional(string)
-    private_dns_zone_group_name          = optional(string)
-    private_dns_vnet_link_name           = optional(string)
-    blob_private_endpoint_enabled        = optional(bool, false)
-    blob_private_endpoint_name           = optional(string)
-    blob_private_service_connection_name = optional(string)
-    blob_private_dns_zone_group_name     = optional(string)
-    shares = map(object({
-      name     = string
-      quota_gb = number
-      smb_role_assignments = optional(map(object({
-        group_name           = string
-        role_definition_name = optional(string, "Storage File Data SMB Share Contributor")
-      })), {})
-      smb_admin_groups = optional(list(string), [])
-    }))
-  }))
+variable "fslogix_storage_account_name" {
+  type        = string
+  description = "Name of the Premium Azure Files storage account for FSLogix profiles."
+}
 
-  validation {
-    condition = alltrue(flatten([
-      for storage in values(var.storage_accounts) : [
-        for share in values(storage.shares) : [
-          for assignment in values(share.smb_role_assignments) : contains([
-            "Storage File Data SMB Share Reader",
-            "Storage File Data SMB Share Contributor",
-            "Storage File Data SMB Share Elevated Contributor"
-          ], assignment.role_definition_name)
-        ]
-      ]
-    ]))
-    error_message = "Each smb_role_assignments role_definition_name must be SMB Share Reader, Contributor, or Elevated Contributor."
-  }
+variable "fslogix_managed_identity_name" {
+  type        = string
+  description = "Managed identity name for the FSLogix storage account."
+}
 
-  validation {
-    condition = alltrue([
-      for storage in values(var.storage_accounts) :
-      !storage.blob_private_endpoint_enabled || contains(["StorageV2", "BlobStorage", "BlockBlobStorage"], storage.kind)
-    ])
-    error_message = "Blob private endpoints can only be enabled for StorageV2, BlobStorage, or BlockBlobStorage accounts."
-  }
+variable "fslogix_file_private_endpoint_name" {
+  type        = string
+  description = "Private endpoint name for the FSLogix file endpoint."
+}
 
-  validation {
-    condition = alltrue([
-      for storage in values(var.storage_accounts) :
-      !coalesce(storage.file_private_endpoint_enabled, length(storage.shares) > 0) || contains(["StorageV2", "FileStorage"], storage.kind)
-    ])
-    error_message = "File private endpoints can only be enabled for StorageV2 or FileStorage accounts."
-  }
+variable "fslogix_file_private_service_connection_name" {
+  type        = string
+  description = "Private service connection name for the FSLogix file endpoint."
+}
 
-  validation {
-    condition = alltrue([
-      for storage in values(var.storage_accounts) :
-      !coalesce(storage.file_private_endpoint_enabled, length(storage.shares) > 0) || (
-        storage.private_endpoint_name != null &&
-        storage.private_endpoint_name != "" &&
-        storage.private_service_connection_name != null &&
-        storage.private_service_connection_name != "" &&
-        storage.private_dns_zone_group_name != null &&
-        storage.private_dns_zone_group_name != ""
-      )
-    ])
-    error_message = "When file_private_endpoint_enabled is true, set private_endpoint_name, private_service_connection_name, and private_dns_zone_group_name."
-  }
+variable "fslogix_file_private_dns_zone_group_name" {
+  type        = string
+  description = "Private DNS zone group name for the FSLogix file endpoint."
+}
 
-  validation {
-    condition = alltrue([
-      for storage in values(var.storage_accounts) :
-      coalesce(storage.file_private_endpoint_enabled, true) || length(storage.shares) == 0
-    ])
-    error_message = "Storage accounts with shares must have file_private_endpoint_enabled set to true."
-  }
+variable "fslogix_share_name" {
+  type        = string
+  description = "FSLogix file share name."
+  default     = "fslogix"
+}
 
-  validation {
-    condition = alltrue([
-      for storage in values(var.storage_accounts) :
-      !storage.blob_private_endpoint_enabled || (
-        storage.blob_private_endpoint_name != null &&
-        storage.blob_private_endpoint_name != "" &&
-        storage.blob_private_service_connection_name != null &&
-        storage.blob_private_service_connection_name != "" &&
-        storage.blob_private_dns_zone_group_name != null &&
-        storage.blob_private_dns_zone_group_name != ""
-      )
-    ])
-    error_message = "When blob_private_endpoint_enabled is true, set blob_private_endpoint_name, blob_private_service_connection_name, and blob_private_dns_zone_group_name."
-  }
+variable "fslogix_share_quota_gb" {
+  type        = number
+  description = "FSLogix file share quota in GiB."
+  default     = 100
+}
+
+variable "fslogix_users_group" {
+  type        = string
+  description = "Display name of the group granted SMB Contributor on the FSLogix share."
+}
+
+variable "fslogix_identity_auth_directory_service" {
+  type        = string
+  description = "Azure Files identity authentication mode. Use AADKERB for Microsoft Entra Kerberos, or null to omit identity authentication."
+  default     = "AADKERB"
+  nullable    = true
+}
+
+variable "general_storage_account_name" {
+  type        = string
+  description = "Name of the general-purpose storage account."
+}
+
+variable "general_managed_identity_name" {
+  type        = string
+  description = "Managed identity name for the general-purpose storage account."
+}
+
+variable "general_blob_private_endpoint_name" {
+  type        = string
+  description = "Private endpoint name for the general-purpose blob endpoint."
+}
+
+variable "general_blob_private_service_connection_name" {
+  type        = string
+  description = "Private service connection name for the general-purpose blob endpoint."
+}
+
+variable "general_blob_private_dns_zone_group_name" {
+  type        = string
+  description = "Private DNS zone group name for the general-purpose blob endpoint."
 }
