@@ -62,7 +62,7 @@ variable "hostpool_maximum_sessions_allowed" {
 variable "hostpool_start_vm_on_connect" {
   type        = bool
   description = "Start session hosts on user connection."
-  default     = false
+  default     = true
 }
 
 variable "hostpool_validate_environment" {
@@ -74,7 +74,7 @@ variable "hostpool_validate_environment" {
 variable "hostpool_custom_rdp_properties" {
   type        = string
   description = "Custom RDP properties for the AVD host pool."
-  default     = "audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
+  default     = "targetisaadjoined:i:1;audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
 }
 
 variable "session_host_disk_info" {
@@ -102,6 +102,14 @@ variable "session_host_boot_diagnostics_info" {
   description = "Default bootDiagnosticsInfo block for automated session host configurations. Individual host pools can override this in session_host_configuration.bootDiagnosticsInfo."
   default = {
     enabled = true
+  }
+}
+
+variable "session_host_domain_info" {
+  type        = any
+  description = "Default domainInfo block for automated session host configurations. Individual host pools can override this in session_host_configuration.domainInfo."
+  default = {
+    joinType = "AzureActiveDirectory"
   }
 }
 
@@ -223,7 +231,7 @@ variable "scaling_plan_friendly_name" {
 variable "scaling_plan_description" {
   type        = string
   description = "Description for the AVD dynamic scaling plan."
-  default     = "Dynamic autoscale scaling plan for Azure Virtual Desktop."
+  default     = null
 }
 
 variable "scaling_plan_time_zone" {

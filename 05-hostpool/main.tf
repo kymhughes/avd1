@@ -1,7 +1,7 @@
 # ── AVD Host Pool, Application Group, Workspace, Scaling Plan ─────────────────
-# Depends on: 01-resource-groups (rg_service_objects_name), 03-monitoring (log_analytics_workspace_id)
-# Provides:   hostpool_id, application_group_id, workspace_id
-#             → consumed by 07-session-hosts, 08-rbac
+# Depends on: existing AVD workspace, Key Vault, private DNS zone, and network subnets.
+# Creates:   host pools, session host configuration, application groups, workspace
+#            associations, private endpoints, role assignments, and scaling plans.
 
 
 data "azurerm_virtual_desktop_workspace" "this" {
@@ -37,7 +37,7 @@ resource "azurerm_role_assignment" "host_pool_mi_vm_contributor" {
 resource "azurerm_role_assignment" "host_pool_mi_network_contributor" {
   for_each = local.host_pools
 
-  scope                = "/subscriptions/${var.spoke_subscription_id}"
+  scope                = "/subscriptions/${var.spoke_subscription_id}/resourceGroups/${var.rg_network}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}"
   role_definition_name = "Network Contributor"
   principal_id         = azapi_resource.host_pool[each.key].identity[0].principal_id
 }
@@ -101,7 +101,9 @@ locals {
             diskInfo            = var.session_host_disk_info
             securityInfo        = var.session_host_security_info
             bootDiagnosticsInfo = var.session_host_boot_diagnostics_info
+            domainInfo          = var.session_host_domain_info
             vmAdminCredentials  = local.default_vm_admin_credentials
+            vmLocation          = var.avdLocation
           },
           try(host_pool.session_host_configuration, {}),
           {
@@ -400,8 +402,8 @@ resource "azapi_resource" "dynamic_scaling_plan" {
   body = {
     properties = merge(
       {
-        description  = coalesce(each.value.scaling_plan_description, var.scaling_plan_description)
-        friendlyName = coalesce(each.value.scaling_plan_friendly_name, var.scaling_plan_friendly_name, "Dynamic Autoscale ${each.value.name}")
+        description  = coalesce(each.value.scaling_plan_description, var.scaling_plan_description, each.value.scaling_plan_name, var.scaling_plan_name, "sp-${each.value.name}")
+        friendlyName = coalesce(each.value.scaling_plan_friendly_name, var.scaling_plan_friendly_name, each.value.scaling_plan_name, var.scaling_plan_name, "sp-${each.value.name}")
         hostPoolType = "Pooled"
         timeZone     = var.scaling_plan_time_zone
 

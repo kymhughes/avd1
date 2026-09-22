@@ -1,14 +1,11 @@
-rg_so                          = "rg-service-objects-npd"
-hostpool_start_vm_on_connect   = true
-hostpool_validate_environment  = true
-key_vault_name                 = "kv-avd-itm-npd"
-workspace_name                 = "workspace-npd"
-rg_network                     = "rg-itm-network-npd"
-vnet_name                      = "vnet-itm-vnet-npd"
-enable_dynamic_scaling_plan    = true
-scaling_plan_time_zone         = "AUS Eastern Standard Time"
-scaling_plan_exclusion_tag     = "excludeFromScaling"
-hostpool_custom_rdp_properties = "targetisaadjoined:i:1;audiocapturemode:i:1;audiomode:i:0;redirectclipboard:i:1;redirectprinters:i:1;drivestoredirect:s:*;"
+rg_so                       = "rg-service-objects-npd"
+key_vault_name              = "kv-avd-itm-npd"
+workspace_name              = "workspace-npd"
+rg_network                  = "rg-itm-network-npd"
+vnet_name                   = "vnet-itm-vnet-npd"
+enable_dynamic_scaling_plan = true
+scaling_plan_time_zone      = "AUS Eastern Standard Time"
+scaling_plan_exclusion_tag  = "excludeFromScaling"
 
 host_pools = [
   {
@@ -17,15 +14,13 @@ host_pools = [
     avd_users_group                        = "avd_users_cloud"
     app_group_name                         = "app-itm001"
     app_group_default_desktop_display_name = "itm001"
+    hostpool_validate_environment          = true
     scaling_plan_name                      = "sp-itm001-npd"
-    scaling_plan_friendly_name             = "ITM001 NPD Dynamic Autoscale"
-    scaling_plan_description               = "Default dynamic autoscale plan for ITM001 NPD."
     session_host_subnet_name               = "snet-itm-001"
     hostpool_private_endpoint_subnet_name  = "snet-itm-001-pe"
     custom_configuration_script_url        = "https://tfstore101.blob.core.windows.net/data/bootstrap-itm001.ps1"
     session_host_configuration = {
       friendlyName = "ITM001 NPD session hosts"
-      vmLocation   = "australiaeast"
       vmNamePrefix = "itm001"
       vmSizeId     = "Standard_D2s_v5"
 
@@ -43,10 +38,6 @@ host_pools = [
         }
       }
 
-      domainInfo = {
-        joinType = "AzureActiveDirectory"
-      }
-
       vmTags = {
         environment = "npd"
         workload    = "avd001"
@@ -60,14 +51,12 @@ host_pools = [
     app_group_name                         = "app-itm002"
     app_group_type                         = "RemoteApp"
     app_group_default_desktop_display_name = "itm002"
+    hostpool_validate_environment          = true
     scaling_plan_name                      = "sp-itm002-npd"
-    scaling_plan_friendly_name             = "ITM002 NPD Dynamic Autoscale"
-    scaling_plan_description               = "Default dynamic autoscale plan for ITM002 NPD."
     session_host_subnet_name               = "snet-itm-002"
     hostpool_private_endpoint_subnet_name  = "snet-itm-002-pe"
     session_host_configuration = {
       friendlyName = "ITM002 NPD session hosts"
-      vmLocation   = "australiaeast"
       vmNamePrefix = "itm002"
       vmSizeId     = "Standard_D2s_v5"
 
@@ -79,10 +68,6 @@ host_pools = [
           sku          = "2022-datacenter-azure-edition"
           exactVersion = "20348.5499.260809"
         }
-      }
-
-      domainInfo = {
-        joinType = "AzureActiveDirectory"
       }
 
       vmTags = {
