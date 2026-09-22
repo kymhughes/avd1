@@ -24,12 +24,6 @@ variable "tags" {
   default     = {}
 }
 
-variable "enable_telemetry" {
-  type        = bool
-  description = "Enable telemetry for AVM modules."
-  default     = true
-}
-
 variable "rg_so" {
   type        = string
   description = "Service objects resource group name."

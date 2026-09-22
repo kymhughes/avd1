@@ -1,8 +1,4 @@
-rg_so                       = "rg-service-objects-npd"
 key_vault_name              = "kv-avd-itm-npd"
-workspace_name              = "workspace-npd"
-rg_network                  = "rg-itm-network-npd"
-vnet_name                   = "vnet-itm-vnet-npd"
 enable_dynamic_scaling_plan = true
 scaling_plan_time_zone      = "AUS Eastern Standard Time"
 scaling_plan_exclusion_tag  = "excludeFromScaling"

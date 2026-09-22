@@ -8,11 +8,6 @@ variable "tenant_id" {
   description = "Azure tenant ID."
 }
 
-variable "prefix" {
-  type        = string
-  description = "Short prefix for resource naming."
-}
-
 variable "spoke_subscription_id" {
   type        = string
   description = "Azure subscription ID for the AVD spoke workload."
@@ -27,12 +22,6 @@ variable "tags" {
   type        = map(string)
   description = "Tags applied to supported resources."
   default     = {}
-}
-
-variable "enable_telemetry" {
-  type        = bool
-  description = "Enable telemetry for AVM modules."
-  default     = true
 }
 
 variable "rg_so" {
@@ -77,6 +66,11 @@ variable "workspace_pe_name" {
 variable "workspace_sc_name" {
   type        = string
   description = "Workspace service connection name."
+}
+
+variable "workspace_dns_zone_group_name" {
+  type        = string
+  description = "Workspace private endpoint DNS zone group name."
 }
 
 variable "avd_service_principal_object_id" {

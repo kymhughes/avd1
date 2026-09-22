@@ -1,6 +1,13 @@
 variable "location" {
   type        = string
   description = "Resource group and gallery location."
+  default     = null
+  nullable    = true
+}
+
+variable "avdLocation" {
+  type        = string
+  description = "Shared Azure region from the environment tfvars."
 }
 
 variable "aib_rg" {

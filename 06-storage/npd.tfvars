@@ -1,9 +1,4 @@
 # 06-storage-example — npd environment
-rg_storage_name = "rg-service-objects-npd"
-rg_network      = "rg-itm-network-npd"
-vnet_name       = "vnet-itm-vnet-npd"
-pesubnet_files  = "snet-general-pe"
-
 active_directory_domain_name = "int.local"
 active_directory_domain_guid = "fea35cd0-3ec6-4c7d-8b99-1073c5d00d19"
 

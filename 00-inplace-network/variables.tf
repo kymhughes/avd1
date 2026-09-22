@@ -3,6 +3,18 @@ variable "avdLocation" {
   description = "Azure region for network resources."
 }
 
+variable "tenant_id" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "environment" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
 variable "spoke_subscription_id" {
   type        = string
   description = "Azure subscription ID for the AVD spoke workload."
@@ -17,6 +29,54 @@ variable "tags" {
   type        = map(string)
   description = "Tags applied to supported resources."
   default     = {}
+}
+
+variable "hub_dns_zone_rg" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "rg_so" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "workspace_name" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "rg_storage_name" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "pesubnet_workspace" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "pesubnet_keyvault" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "pesubnet_files" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "avd_service_principal_object_id" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
 }
 
 variable "rg_network" {

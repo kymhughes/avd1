@@ -2,6 +2,10 @@ provider "azurerm" {
   features {}
 }
 
+locals {
+  location = coalesce(var.location, var.avdLocation)
+}
+
 data "azurerm_virtual_network" "existing" {
   name                = var.vnet_name
   resource_group_name = var.rg_network
@@ -9,7 +13,7 @@ data "azurerm_virtual_network" "existing" {
 
 resource "azurerm_resource_group" "image_gallery" {
   name     = var.aib_rg
-  location = var.location
+  location = local.location
   tags     = var.tags
 }
 

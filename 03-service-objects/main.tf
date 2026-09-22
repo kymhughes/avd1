@@ -24,7 +24,7 @@ module "avm_res_desktopvirtualization_workspace" {
   virtual_desktop_workspace_resource_group_name = azurerm_resource_group.service_objects.name
   virtual_desktop_workspace_location            = var.avdLocation
   virtual_desktop_workspace_tags                = var.tags
-  enable_telemetry                              = var.enable_telemetry
+  enable_telemetry                              = false
   public_network_access_enabled                 = false
 }
 
@@ -51,7 +51,7 @@ resource "azurerm_private_endpoint" "workspace_pe" {
   }
 
   private_dns_zone_group {
-    name                 = "dns-ws-${var.prefix}"
+    name                 = var.workspace_dns_zone_group_name
     private_dns_zone_ids = [data.azurerm_private_dns_zone.avd_feed_dns.id]
   }
 

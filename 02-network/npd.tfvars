@@ -1,6 +1,3 @@
-rg_network = "rg-itm-network-npd"
-vnet_name  = "vnet-itm-vnet-npd"
-
 subnets = {
   "snet-itm-001" = {
     firewall                          = "172.17.0.36"

@@ -40,7 +40,7 @@ module "avm_res_keyvault_vault" {
   resource_group_name           = data.azurerm_resource_group.service_objects.name
   tenant_id                     = var.tenant_id
   tags                          = var.tags
-  enable_telemetry              = var.enable_telemetry
+  enable_telemetry              = false
   public_network_access_enabled = false
   purge_protection_enabled      = false
   #soft_delete_retention_days    = 90

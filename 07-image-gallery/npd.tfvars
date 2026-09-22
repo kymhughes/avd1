@@ -1,7 +1,4 @@
 aib_rg                          = "rg-imagebuilder"
-location                        = "australiaeast"
-rg_network                      = "rg-itm-network-npd"
-vnet_name                       = "vnet-itm-vnet-npd"
 publisher                       = "MicrosoftWindowsServer"
 offer                           = "WindowsServer"
 sku                             = "2022-datacenter-azure-edition"

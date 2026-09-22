@@ -6,7 +6,6 @@ aib_container_instance_subnet_id = "/subscriptions/e4ea360b-bf76-47bc-bb09-81bd2
 aib_vm_size                      = "Standard_D4s_v5"
 aib_os_disk_size_gb              = 127
 image_replication_regions        = ["australiaeast"]
-location                         = "australiaeast"
 offer                            = "WindowsServer"
 publisher                        = "MicrosoftWindowsServer"
 sku                              = "2022-datacenter-azure-edition"

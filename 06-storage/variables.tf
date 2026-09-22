@@ -8,15 +8,9 @@ variable "tenant_id" {
   description = "Azure tenant ID."
 }
 
-variable "prefix" {
-  type        = string
-  description = "Compatibility variable for shared environment tfvars."
-  default     = null
-}
-
 variable "environment" {
   type        = string
-  description = "Environment name."
+  description = "Compatibility variable for shared environment tfvars."
   default     = null
 }
 
@@ -36,10 +30,16 @@ variable "tags" {
   default     = {}
 }
 
-variable "enable_telemetry" {
-  type        = bool
+variable "rg_so" {
+  type        = string
   description = "Compatibility variable for shared environment tfvars."
-  default     = true
+  default     = null
+}
+
+variable "workspace_name" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
 }
 
 variable "rg_storage_name" {
@@ -62,9 +62,27 @@ variable "pesubnet_files" {
   description = "Private endpoint subnet name."
 }
 
+variable "pesubnet_workspace" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "pesubnet_keyvault" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
 variable "hub_dns_zone_rg" {
   type        = string
   description = "Hub resource group for private DNS zones."
+}
+
+variable "avd_service_principal_object_id" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
 }
 
 variable "active_directory_domain_name" {

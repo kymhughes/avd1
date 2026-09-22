@@ -1,6 +1,3 @@
-rg_network = "rg-itm-network-tst"
-vnet_name  = "vnet-itm-vnet-tst"
-
 subnets = {
   "snet-itm-001" = {
     address_prefixes                  = ["172.17.110.0/28"]

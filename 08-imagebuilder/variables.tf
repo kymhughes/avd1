@@ -1,6 +1,97 @@
-variable "location" {
+variable "avdLocation" {
   type        = string
-  description = "Resource group location. Make sure you are deploying in a location where Azure Image Builder is supported"
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "tenant_id" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "environment" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "spoke_subscription_id" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "hub_subscription_id" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "tags" {
+  description = "Compatibility variable for shared environment tfvars."
+  type        = map(any)
+  default     = null
+}
+
+variable "hub_dns_zone_rg" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "rg_network" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "vnet_name" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "rg_so" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "workspace_name" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "rg_storage_name" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "pesubnet_workspace" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "pesubnet_keyvault" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "pesubnet_files" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
+}
+
+variable "avd_service_principal_object_id" {
+  type        = string
+  description = "Compatibility variable for shared environment tfvars."
+  default     = null
 }
 
 variable "aib_rg" {
@@ -13,11 +104,6 @@ variable "aib_user_assigned_identity_id" {
   description = "Existing user-assigned managed identity ID used by Azure Image Builder."
 }
 
-variable "tags" {
-  description = "Tags to be used for this resource deployment."
-  type        = map(any)
-  default     = null
-}
 
 variable "publisher" {
   type        = string
