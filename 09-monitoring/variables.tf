@@ -15,7 +15,7 @@ variable "spoke_subscription_id" {
 
 variable "rg_monitoring_name" {
   type        = string
-  description = "Existing monitoring resource group name."
+  description = "Monitoring resource group name to create."
 }
 
 variable "log_analytics_workspace_name" {
