@@ -105,6 +105,12 @@ variable "session_host_boot_diagnostics_info" {
   }
 }
 
+variable "session_host_availability_zones" {
+  type        = list(number)
+  description = "Default availability zones for automated session hosts. Individual host pools can override this in session_host_configuration.availabilityZones."
+  default     = [1, 2, 3]
+}
+
 variable "session_host_domain_info" {
   type        = any
   description = "Default domainInfo block for automated session host configurations. Individual host pools can override this in session_host_configuration.domainInfo."

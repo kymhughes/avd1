@@ -103,6 +103,7 @@ locals {
 
         session_host_configuration = merge(
           {
+            availabilityZones   = var.session_host_availability_zones
             diskInfo            = var.session_host_disk_info
             securityInfo        = var.session_host_security_info
             bootDiagnosticsInfo = var.session_host_boot_diagnostics_info

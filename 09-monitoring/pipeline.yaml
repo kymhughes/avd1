@@ -1,0 +1,41 @@
+trigger: none
+# trigger:
+#  branches:
+#    include:
+#      - main
+#  paths:
+#    include:
+#      - 09-monitoring/*
+pool:
+  name: devopspool1
+  #name: Azure Pipelines
+
+parameters:
+  - name: doDestroy
+    displayName: Destroy resources
+    type: boolean
+    default: false
+
+  - name: deployNpd
+    displayName: 'Environment: NPD'
+    type: boolean
+    default: true
+
+  - name: deployUat
+    displayName: 'Environment: UAT'
+    type: boolean
+    default: false
+
+  - name: deployPrd
+    displayName: 'Environment: PRD'
+    type: boolean
+    default: false
+
+stages:
+  - template: ../_common/terraform-environments.yml
+    parameters:
+      tfFolder: 09-monitoring
+      doDestroy: ${{ parameters.doDestroy }}
+      deployNpd: ${{ parameters.deployNpd }}
+      deployUat: ${{ parameters.deployUat }}
+      deployPrd: ${{ parameters.deployPrd }}

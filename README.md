@@ -7,7 +7,7 @@ This repository contains Azure DevOps pipeline-driven Terraform deployments for 
 | `02-network` | Adds AVD and private endpoint subnets, subnet NSGs, NSG rules, and route table associations to an existing VNet. |
 | `03-service-objects` | Creates the service objects resource group, AVD workspace, workspace private endpoint, and AVD service-principal role assignments. |
 | `04-keyvault` | Creates the Key Vault, Key Vault private endpoint, generated local admin secrets, and Key Vault access for AVD automation. |
-| `05-hostpool` | Creates automated AVD host pools, session host configuration, app groups, remote apps, private endpoints, and scaling plans. |
+| `05-hostpool` | Creates automated AVD host pools, zone-spread session host configuration, app groups, remote apps, private endpoints, and scaling plans. |
 | `06-storage` | Creates FSLogix and general-purpose storage accounts, private endpoints, and FSLogix share permissions. |
 | `07-image-gallery` | Creates the Azure Compute Gallery, image definition, Azure Image Builder identity, and image-builder permissions. |
 | `_common` | Shared Azure DevOps templates used by each module pipeline. |
@@ -308,7 +308,7 @@ It creates per host pool:
 | Compute resource group | Created through `terraform_data` and `az rest`. |
 | Host pool | Created with AzAPI against `Microsoft.DesktopVirtualization/hostPools@2026-04-01-preview`. |
 | System-assigned host pool identity | Used for automated management actions. |
-| Session host configuration | Defines VM image, size, network, credentials, tags, domain join type, security settings, and optional bootstrap script. |
+| Session host configuration | Defines VM image, size, network, credentials, tags, domain join type, security settings, availability zones, and optional bootstrap script. |
 | Session host management | Configured through `az rest` because it uses preview API functionality. |
 | Application group | Desktop or RemoteApp group. |
 | Remote apps | Created only when a host pool's app group type is `RemoteApp`. |
@@ -330,6 +330,8 @@ The `locals` block is the main shaping layer. It merges global defaults with eac
 2. Overlay any per-host-pool `session_host_configuration` values from tfvars.
 3. Force the subnet ID and merged VM tags from standard variables.
 4. Add `customConfigurationScriptUrl` only when one is provided.
+
+By default, automated session hosts use `availabilityZones = [1, 2, 3]` so Azure can spread hosts across zones in regions that support all three zones. A specific host pool can override this by setting `session_host_configuration.availabilityZones` in that pool's tfvars object.
 
 The compute resource group is created through `terraform_data` with a `local-exec` `az rest` call. This is unusual but allows the module to create or update the resource group using a deterministic ARM PUT payload before reading it back with `data.azurerm_resource_group.compute`.
 
