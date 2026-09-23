@@ -82,21 +82,27 @@ resource "azurerm_policy_definition" "diagnostic_settings" {
                   apiVersion = "2021-05-01-preview"
                   name       = "[parameters('diagnosticSettingName')]"
                   scope      = "[parameters('resourceId')]"
-                  properties = {
-                    workspaceId = "[parameters('logAnalyticsWorkspaceId')]"
-                    logs = each.value.enable_logs ? [
-                      {
-                        categoryGroup = "allLogs"
-                        enabled       = true
-                      }
-                    ] : []
-                    metrics = each.value.enable_metrics ? [
-                      {
-                        category = "AllMetrics"
-                        enabled  = true
-                      }
-                    ] : []
-                  }
+                  properties = merge(
+                    {
+                      workspaceId = "[parameters('logAnalyticsWorkspaceId')]"
+                    },
+                    each.value.enable_logs ? {
+                      logs = [
+                        {
+                          categoryGroup = "allLogs"
+                          enabled       = true
+                        }
+                      ]
+                    } : {},
+                    each.value.enable_metrics ? {
+                      metrics = [
+                        {
+                          category = "AllMetrics"
+                          enabled  = true
+                        }
+                      ]
+                    } : {}
+                  )
                 }
               ]
             }
