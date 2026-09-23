@@ -2,6 +2,7 @@ resource "azurerm_monitor_data_collection_rule" "session_hosts" {
   name                = var.data_collection_rule_name
   resource_group_name = azurerm_resource_group.monitoring.name
   location            = var.avdLocation
+  kind                = "Windows"
   tags                = var.tags
 
   destinations {
@@ -17,7 +18,7 @@ resource "azurerm_monitor_data_collection_rule" "session_hosts" {
   }
 
   data_flow {
-    streams      = ["Microsoft-WindowsEvent"]
+    streams      = ["Microsoft-Event"]
     destinations = ["log-analytics"]
   }
 
@@ -31,7 +32,7 @@ resource "azurerm_monitor_data_collection_rule" "session_hosts" {
 
     windows_event_log {
       name           = "session-host-windows-events"
-      streams        = ["Microsoft-WindowsEvent"]
+      streams        = ["Microsoft-Event"]
       x_path_queries = var.session_host_windows_event_logs
     }
   }
