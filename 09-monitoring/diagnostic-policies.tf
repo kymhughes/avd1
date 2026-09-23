@@ -124,7 +124,7 @@ resource "azurerm_subscription_policy_assignment" "diagnostic_settings" {
   name                 = each.value.assignment
   display_name         = "Deploy diagnostics for ${each.value.display_name}"
   policy_definition_id = azurerm_policy_definition.diagnostic_settings[each.key].id
-  subscription_id      = var.spoke_subscription_id
+  subscription_id      = local.diagnostic_policy_scope
   location             = var.avdLocation
   description          = "Deploys diagnostic settings for ${each.value.resource_type} to ${var.log_analytics_workspace_name}."
 
@@ -157,7 +157,7 @@ resource "azurerm_subscription_policy_remediation" "diagnostic_settings" {
   for_each = var.enable_diagnostic_policy_remediation ? local.diagnostic_policy_resources : {}
 
   name                    = "remediate-${each.value.assignment}"
-  subscription_id         = var.spoke_subscription_id
+  subscription_id         = local.diagnostic_policy_scope
   policy_assignment_id    = azurerm_subscription_policy_assignment.diagnostic_settings[each.key].id
   resource_discovery_mode = "ReEvaluateCompliance"
 
