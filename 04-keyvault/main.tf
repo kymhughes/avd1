@@ -1,4 +1,6 @@
-# ── Key Vault — CMK Key, VM Password Secret, Private Endpoint ─────────────────
+# Creates the private Key Vault used by AVD session host automation.
+# The module stores generated local administrator credentials as secrets and
+# grants the AVD service principal read access through Key Vault RBAC.
 # resource "azurerm_resource_group" "service_objects" {
 #   location = var.avdLocation
 #   name     = var.rg_so
@@ -19,14 +21,15 @@ resource "random_password" "local" {
 }
 
 
-# ── Private DNS Zone for Key Vault (pre-existing in hub) ─────────────────────
+# The Key Vault private DNS zone is centralised in the hub subscription.
 data "azurerm_private_dns_zone" "kv_dns" {
   provider            = azurerm.hub
   name                = "privatelink.vaultcore.azure.net"
   resource_group_name = var.hub_dns_zone_rg
 }
 
-# ── Key Vault (AVM v0.10.2) ────────────────────────────────────────────────────
+# Public network access is disabled, so any data-plane operations after creation
+# depend on private endpoint DNS and routing from the Terraform runner.
 module "avm_res_keyvault_vault" {
   source = "Azure/avm-res-keyvault-vault/azurerm"
   #version   = "0.5.3"
@@ -88,6 +91,7 @@ module "avm_res_keyvault_vault" {
   # }
 }
 
+# Give private endpoint DNS and routing time to settle before writing secrets.
 resource "time_sleep" "wait_for_keyvault_private_endpoint" {
   create_duration = "120s"
 
@@ -96,6 +100,7 @@ resource "time_sleep" "wait_for_keyvault_private_endpoint" {
   ]
 }
 
+# Host pool automation reads these secrets when creating managed session hosts.
 resource "azurerm_role_assignment" "avd_keyvault_secrets_user" {
   provider = azurerm.spoke
 
@@ -118,6 +123,8 @@ resource "azurerm_key_vault_secret" "vm_local_admin_username" {
   content_type = "AVD session host local administrator username"
   tags         = var.tags
 
+  # Secret values are intentionally managed as create-time values. This avoids
+  # accidental credential rotation on routine Terraform runs.
   lifecycle {
     ignore_changes = [
       value,
@@ -139,6 +146,8 @@ resource "azurerm_key_vault_secret" "vm_local_admin_password" {
   content_type = "AVD session host local administrator password"
   tags         = var.tags
 
+  # Secret values are intentionally managed as create-time values. This avoids
+  # accidental credential rotation on routine Terraform runs.
   lifecycle {
     ignore_changes = [
       value,

@@ -1,3 +1,7 @@
+# Creates AVD-related subnets inside an existing spoke VNet.
+# This module intentionally does not create the VNet or route tables; it reads
+# those existing resources and then applies subnet, NSG, rule, and route-table
+# associations from the environment-specific subnet map.
 
 data "azurerm_resource_group" "existing" {
   name = var.rg_network
@@ -49,6 +53,9 @@ resource "azurerm_network_security_group" "subnet" {
 
 
 
+# These derived maps keep the subnet input flexible while still producing stable
+# for_each keys for optional route-table associations, NSG associations, and
+# nested security rules.
 locals {
   subnet_route_table_names = {
     for subnet_key, subnet in var.subnets : subnet_key => trimspace(subnet.route_table_name)
@@ -101,6 +108,8 @@ resource "azurerm_network_security_rule" "subnet" {
   resource_group_name         = var.rg_network
   network_security_group_name = azurerm_network_security_group.subnet[each.value.subnet_key].name
 
+  # AzureRM exposes separate singular and plural arguments for ports and
+  # prefixes. Default to "*" only when neither form is supplied by tfvars.
   source_port_range = (
     each.value.rule.source_port_range == null && each.value.rule.source_port_ranges == null
     ? "*"

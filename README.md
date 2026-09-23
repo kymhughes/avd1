@@ -1,748 +1,453 @@
-# AVD Accelerator — Terraform Modules
+# AVD Terraform Pipeline Repository
 
-Standalone, pipeline-ready Terraform modules for deploying a fully **private** Azure Virtual Desktop (AVD) environment using **Entra ID (AAD) join** — no Active Directory domain controllers required. All services are accessible exclusively through **private endpoints**. Public network access is disabled on all AVD and storage resources.
+This repository contains Azure DevOps pipeline-driven Terraform deployments for a private Azure Virtual Desktop (AVD) platform. The active deployment flow covered by this README is limited to these folders:
 
-Each module maps to one pipeline stage and manages a single architectural layer. Cross-module values flow through Terraform outputs stored in local state files or pipeline variables.
+| Folder | Purpose |
+|---|---|
+| `02-network` | Adds AVD and private endpoint subnets, subnet NSGs, NSG rules, and route table associations to an existing VNet. |
+| `03-service-objects` | Creates the service objects resource group, AVD workspace, workspace private endpoint, and AVD service-principal role assignments. |
+| `04-keyvault` | Creates the Key Vault, Key Vault private endpoint, generated local admin secrets, and Key Vault access for AVD automation. |
+| `05-hostpool` | Creates automated AVD host pools, session host configuration, app groups, remote apps, private endpoints, and scaling plans. |
+| `06-storage` | Creates FSLogix and general-purpose storage accounts, private endpoints, and FSLogix share permissions. |
+| `07-image-gallery` | Creates the Azure Compute Gallery, image definition, Azure Image Builder identity, and image-builder permissions. |
+| `_common` | Shared Azure DevOps templates used by each module pipeline. |
+| `_environment` | Shared environment tfvars and Azure DevOps variable templates. |
 
----
+The `00`, `08`, `10`, and `11` folders are intentionally excluded from this documentation.
 
-## Architecture Overview
+## High-level deployment model
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                       HUB Subscription (aa99492d-...)                        │
-│                                                                              │
-│  rg-hub-aus                          rg-privatedns                          │
-│  ┌─────────────────────────────┐     ┌────────────────────────────────────┐ │
-│  │  vnet-hub-aus (10.0.0.0/16) │     │  privatelink.vaultcore.azure.net   │ │
-│  │  Azure Firewall (10.0.0.4)  │     │  privatelink.file.core.windows.net │ │
-│  │  Azure Bastion              │     │  privatelink.wvd.microsoft.com     │ │
-│  │  Hub NSG / Route Tables     │     │  privatelink-global.wvd.microsoft… │ │
-│  └─────────────────────────────┘     └────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────────────────────┘
-              │ VNet Peering (hub ↔ spoke)            │ VNet Links
-              ▼                                        ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                      SPOKE Subscription (05e200dc-...)                       │
-│                                                                              │
-│  ┌──────────────┐  ┌──────────────────────────────────────────────────────┐ │
-│  │  01 · RGs    │  │  02 · Network  (rg-avd-austr-<prefix>-network)       │ │
-│  │  service-obj │  │  VNet 10.100.x.0/24                                  │ │
-│  │  storage     │  │  snet-avd-hp   (session hosts)                       │ │
-│  │  pool-compute│  │  snet-avd-pe   (private endpoints)                   │ │
-│  │  monitoring  │  │  NSG, Route Table → Firewall, VNet Peering to hub    │ │
-│  └──────────────┘  └──────────────────────────────────────────────────────┘ │
-│                                                                              │
-│  ┌──────────────────────────┐  ┌──────────────────────────────────────────┐ │
-│  │  03 · Monitoring         │  │  04 · Key Vault                          │ │
-│  │  Log Analytics Workspace │  │  KV (AVM), CMK key (RSA 4096)            │ │
-│  └──────────────────────────┘  │  VM admin password secret                │ │
-│                                │  Private Endpoint → privatelink.vault...  │ │
-│  ┌──────────────────────────┐  │  DNS VNet link in hub                    │ │
-│  │  06 · FSLogix Storage    │  └──────────────────────────────────────────┘ │
-│  │  Premium FileStorage     │                                              │ │
-│  │  AADKERB auth            │  ┌──────────────────────────────────────────┐ │
-│  │  FSLogix file share      │  │  05 · AVD Host Pool  (per-app)           │ │
-│  │  Private Endpoint        │  │  Host pool (Entra SSO, public disabled)  │ │
-│  │  DNS VNet link in hub    │  │  Desktop App Group + Workspace           │ │
-│  └──────────────────────────┘  │  Scaling plan (AUS East timezone)        │ │
-│                                │  PE: workspace feed  (privatelink.wvd…)  │ │
-│  ┌──────────────────────────┐  │  PE: workspace global (privatelink-gl…)  │ │
-│  │  07 · Session Hosts      │  │  PE: hostpool connection (privatelink…)  │ │
-│  │  Windows 11 24H2 AVD VMs │  │  DNS VNet links in hub                   │ │
-│  │  Entra ID join           │  └──────────────────────────────────────────┘ │
-│  │  DSC AVD registration    │                                              │ │
-│  │  FSLogix registry config │  ┌──────────────────────────────────────────┐ │
-│  │  Encryption at host      │  │  08 · RBAC                               │ │
-│  └──────────────────────────┘  │  VM User Login                           │ │
-│                                │  FSLogix SMB Share Contributor            │ │
-│                                │  Scaling Plan Power On/Off                │ │
-│                                └──────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────────────────────┘
+Each deployable folder has its own `pipeline.yaml`. The folder pipeline is intentionally small: it defines runtime parameters and passes the folder name into the shared templates under `_common`.
+
+```text
+<module>/pipeline.yaml
+  -> _common/terraform-environments.yml
+       -> _common/terraform-plan-apply.yml
+            -> terraform fmt
+            -> terraform init
+            -> terraform validate
+            -> terraform plan
+            -> terraform apply
 ```
 
----
+The pipeline model is environment-aware. A single run can deploy one or more of NPD, UAT, and PRD by selecting boolean parameters at queue time. Each selected environment becomes an Azure DevOps stage with its own variable template, tfvars files, backend state key, and service connection.
 
-## Per-App Design Pattern
+## Recommended deployment order
 
-This accelerator supports creating **multiple isolated AVD environments per application** within the same infrastructure. Foundation modules (01–04, 06) are deployed **once per environment**. Host pool and session host modules (05, 07, 08) are deployed **once per application**.
+Run the included modules in this order unless you are intentionally changing an isolated layer:
 
-```
-Foundation (deploy once)                Per-App (deploy per application)
-─────────────────────────               ────────────────────────────────
-01  Resource Groups                     05  Host Pool  (app_name = "finance")
-02  Network                         ──► 07  Session Hosts
-03  Monitoring                      ──► 08  RBAC
-04  Key Vault                       │
-06  FSLogix Storage                 └── 05  Host Pool  (app_name = "hr")
-                                        07  Session Hosts
-                                        08  RBAC
-```
+1. `02-network`
+2. `03-service-objects`
+3. `04-keyvault`
+4. `06-storage`
+5. `07-image-gallery`
+6. `05-hostpool`
 
-The `app_name` variable (e.g. `finance`, `hr`, `ops`) is embedded in all resource names created by modules 05, 07, and 08, ensuring full isolation between applications.
+`05-hostpool` depends on resources from the earlier layers: workspace and service objects, Key Vault secrets, storage/network conventions, and existing subnets. `07-image-gallery` can be run before host pools when custom image plumbing is needed, but the host pool tfvars currently use marketplace images.
 
-**Naming pattern with `app_name`:**
-```
-vdpool-poc1-ops-prod-australiaeast          ← host pool
-vdws-poc1-ops-prod-australiaeast            ← workspace
-vdag-poc1-ops-prod-australiaeast            ← app group
-poc1-avd-ops-vm-1 / poc1-avd-ops-vm-2      ← session hosts
-pe-avd-hp-ops-poc1                          ← host pool PE
-pe-avd-ws-ops-poc1                          ← workspace feed PE
-pe-avd-ws-global-ops-poc1                   ← workspace global PE
-```
+## Pipeline entrypoints
 
----
+Each included module pipeline follows the same pattern:
 
-## Module Dependency Map
+```yaml
+trigger: none
 
-```
-01-resource-groups ──────────────────────────────────────────────► all modules
-02-network         ──────────────────────────────────────────────► 04, 05, 06, 07
-03-monitoring      ──────────────────────────────────────────────► 05
-04-keyvault        ──────────────────────────────────────────────► 07 (vm_password)
-05-avd-hostpool    ──────────────────────────────────────────────► 07 (auto via state), 08
-06-storage         ──────────────────────────────────────────────► 07 (fslogix_storage_account_name), 08
-07-session-hosts   (no downstream — outputs consumed manually)
-08-rbac            (no downstream dependencies)
-```
+pool:
+  name: devopspool1
 
----
+parameters:
+  - name: doDestroy
+    type: boolean
+    default: false
+  - name: deployNpd
+    type: boolean
+    default: true
+  - name: deployUat
+    type: boolean
+    default: false
+  - name: deployPrd
+    type: boolean
+    default: false
 
-## Module Summary Table
-
-| # | Module | What It Creates | Key Inputs | Key Outputs |
-|---|--------|----------------|------------|-------------|
-| 01 | `01-resource-groups` | 4 resource groups | `prefix`, `environment`, `avdLocation` | `rg_*_name`, `rg_*_id` |
-| 02 | `02-network` | VNet, 2 subnets, NSG, UDR → firewall, hub↔spoke peering | `vnet_range`, `hub_vnet`, `next_hop_ip` | `vnet_id`, `subnet_id`, `pesubnet_id` |
-| 03 | `03-monitoring` | Log Analytics workspace (AVM) | `rg_monitoring_name` | `log_analytics_workspace_id` |
-| 04 | `04-keyvault` | KV (AVM), CMK key, VM password, KV PE, DNS VNet link | `hub_subscription_id`, `spoke_vnet_id`, `pesubnet_id` | `vm_password_value` *(sensitive)* |
-| 05 | `05-avd-hostpool` | Host pool + 3 PEs, workspace, app group, scaling plan | **`app_name`**, `pesubnet_id`, `spoke_vnet_id`, `hub_subscription_id`, `hub_dns_zone_rg` | `hostpool_name`, `registration_token`, `application_group_id` |
-| 06 | `06-storage` | FSLogix Premium storage, file share, PE, DNS VNet link | `hub_subscription_id`, `spoke_vnet_id`, `pesubnet_id` | `storage_account_id`, `storage_account_name` |
-| 07 | `07-session-hosts` | NICs, Win11 VMs, AAD join, DSC agent, FSLogix registry | **`app_name`**, `fslogix_storage_account_name`, `vm_password` | `vm_ids`, `vm_names`, `vm_principal_ids` |
-| 08 | `08-rbac` | VM User Login, FSLogix SMB, Scaling power roles | `application_group_id`, `storage_account_id` | role assignment IDs |
-
-> **Module 08 note:** `Desktop Virtualization User` on the app group is assigned by the AVM applicationgroup module inside module 05 — it is **not** created in module 08 to prevent 409 Conflict errors.
-
----
-
-## Private Endpoint Architecture
-
-All data plane access flows through private endpoints. No public internet exposure.
-
-| Resource | PE Subresource | DNS Zone | Module |
-|----------|---------------|----------|--------|
-| Key Vault | `vault` | `privatelink.vaultcore.azure.net` | 04 |
-| FSLogix Storage (Files) | `file` | `privatelink.file.core.windows.net` | 06 |
-| AVD Workspace (feed) | `feed` | `privatelink.wvd.microsoft.com` | 05 |
-| AVD Workspace (global) | `global` | `privatelink-global.wvd.microsoft.com` | 05 |
-| AVD Host Pool (connection) | `connection` | `privatelink.wvd.microsoft.com` | 05 |
-
-**DNS Architecture:**
-- All private DNS zones live in the **hub subscription** (`rg-privatedns`) and are referenced via Terraform `data` blocks — they are **never created by application modules**
-- Each module creates a **VNet link** connecting the spoke VNet to the relevant hub DNS zone (`registration_enabled = false`)
-- Private endpoints register their NIC IPs in the hub DNS zones via the `private_dns_zone_group` block
-
-**Hub DNS zones required (must pre-exist before running modules):**
-```
-privatelink.vaultcore.azure.net         ← for 04-keyvault
-privatelink.file.core.windows.net       ← for 06-storage
-privatelink.wvd.microsoft.com           ← for 05-avd-hostpool (workspace feed + hostpool connection)
-privatelink-global.wvd.microsoft.com    ← for 05-avd-hostpool (workspace global)
+stages:
+  - template: ../_common/terraform-environments.yml
+    parameters:
+      tfFolder: <module-folder>
 ```
 
-Create any missing zones once:
-```powershell
-$sub = "aa99492d-2efe-4d6e-995c-ec734bd0cbb3"   # hub subscription
-$rg  = "rg-privatedns"
+### Runtime parameters
 
-az network private-dns zone create -g $rg -n "privatelink.vaultcore.azure.net"        --subscription $sub
-az network private-dns zone create -g $rg -n "privatelink.file.core.windows.net"      --subscription $sub
-az network private-dns zone create -g $rg -n "privatelink.wvd.microsoft.com"          --subscription $sub
-az network private-dns zone create -g $rg -n "privatelink-global.wvd.microsoft.com"   --subscription $sub
+| Parameter | Default | Effect |
+|---|---:|---|
+| `doDestroy` | `false` | When `true`, the plan step adds `-destroy`; the apply step then applies that destroy plan. |
+| `deployNpd` | `true` | Adds an `NPD` stage using `_environment/vars-npd.yml`, `_environment/npd.tfvars`, and `<module>/npd.tfvars`. |
+| `deployUat` | `false` | Adds a `UAT` stage using `_environment/vars-uat.yml`, `_environment/uat.tfvars`, and `<module>/uat.tfvars`. |
+| `deployPrd` | `false` | Adds a `PRD` stage using `_environment/vars-prd.yml`, `_environment/prd.tfvars`, and `<module>/prd.tfvars`. |
+
+All module pipelines currently use `trigger: none`, so runs are manually started. Commented branch/path trigger examples are present in the pipeline files but are not active.
+
+## Common pipeline templates
+
+### `_common/terraform-environments.yml`
+
+This template expands the queue-time environment flags into concrete stages. It does not run Terraform itself; it calls `_common/terraform-plan-apply.yml` once per selected environment.
+
+For each selected environment it sets:
+
+| Environment | Stage | Service connection | Variable template | Shared tfvars | Module tfvars | State key format |
+|---|---|---|---|---|---|---|
+| NPD | `NPD` | `sp-avd-lab` | `../_environment/vars-npd.yml` | `../_environment/npd.tfvars` | `npd.tfvars` | `npd-<tfFolder>.tfstate` |
+| UAT | `UAT` | `sp-avd-lab-uat` | `../_environment/vars-uat.yml` | `../_environment/uat.tfvars` | `uat.tfvars` | `uat-<tfFolder>.tfstate` |
+| PRD | `PRD` | `sp-avd-lab-prd` | `../_environment/vars-prd.yml` | `../_environment/prd.tfvars` | `prd.tfvars` | `prd-<tfFolder>.tfstate` |
+
+The environment template keeps each module pipeline consistent. If a new module follows the same folder layout, its pipeline only needs to pass a different `tfFolder` value.
+
+### `_common/terraform-plan-apply.yml`
+
+This template performs the Terraform work inside each environment stage.
+
+1. **Checkout**: checks out the repo.
+2. **Install Terraform**: downloads the configured Terraform version into `$(Agent.TempDirectory)/terraform`, prepends it to `PATH`, and prints the version.
+3. **Agent route workaround**: adds explicit routes for `172.17.10.6/32` and `172.17.100.246/32` via the current default gateway. This exists because the self-hosted DevOps pool address range clashes with target network ranges.
+4. **Format check**: runs `terraform fmt -check -recursive` in the selected module folder.
+5. **Init**: writes a transient `backend.tf` containing `backend "azurerm" {}` and runs `terraform init` with backend settings from the selected environment variable template.
+6. **Validate**: runs `terraform validate`.
+7. **Plan**: builds a `plan_args` array, optionally adds `-destroy`, appends the shared and module tfvars files, then writes `tfplan`.
+8. **Apply**: runs `terraform apply -auto-approve tfplan`.
+
+The template exports these automation variables before init, plan, and apply:
+
+| Variable | Purpose |
+|---|---|
+| `TF_IN_AUTOMATION=true` | Tells Terraform it is running non-interactively in automation. |
+| `TF_INPUT=false` | Prevents prompts that would hang the pipeline. |
+| `ARM_SUBSCRIPTION_ID` | Sets the deployment subscription from `$(deploymentSubscriptionId)`. |
+| `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`, `ARM_TENANT_ID` | Populated from the Azure DevOps service connection because `addSpnToEnvironment: true` is enabled. |
+| `TF_VAR_environment` | Passes the selected environment name into Terraform. |
+
+#### Backend behavior
+
+The backend is not hardcoded in the Terraform modules. Instead, the pipeline writes `backend.tf` at runtime and initializes the AzureRM backend with:
+
+```text
+resource_group_name  = $(backendResourceGroupName)
+storage_account_name = $(backendStorageAccountName)
+container_name       = tfstate
+key                  = <environment>-<module-folder>.tfstate
+subscription_id      = $(stateSubscriptionId)
+tenant_id            = ARM_TENANT_ID
+client_id            = ARM_CLIENT_ID
+use_azuread_auth     = true
 ```
 
----
+The current environment variable templates point to:
 
-## Directory Structure
-
-```
-AVD-Modules/
-├── README.md
-├── deploy-avd.ps1              ← interactive deployment helper script
-├── knownerrors.md
-├── 01-resource-groups/
-│   ├── main.tf
-│   ├── locals.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   ├── providers.tf
-│   ├── dev.tfvars
-│   ├── nonprod.tfvars
-│   ├── prod.tfvars
-│   └── terraform.tfvars.example
-├── 02-network/          ← same file layout
-├── 03-monitoring/       ← same file layout
-├── 04-keyvault/         ← same file layout
-├── 05-avd-hostpool/     ← same file layout
-├── 06-storage/          ← same file layout
-├── 07-session-hosts/    ← same file layout
-└── 08-rbac/             ← same file layout
+```text
+backendResourceGroupName  = rg-tfstore
+backendStorageAccountName = tfstore101
 ```
 
----
+The deployment subscription and state subscription are separated. This lets the pipeline deploy resources into the workload subscription while storing state in the state subscription.
 
-## Prerequisites
+#### Destroy behavior
 
-### 1 — Tools
+When `doDestroy=true`, only the plan command changes:
 
-| Tool | Minimum Version |
-|------|----------------|
-| Terraform | `>= 1.9.0` |
-| Azure CLI (`az`) | latest |
-| PowerShell | `>= 7.2` |
-
-### 2 — Azure CLI login
-
-```powershell
-az login --tenant "d4b3cf5c-e7a8-4dbb-8d89-603066a7f185"
-az account set --subscription "05e200dc-cec4-4234-8142-d2fe12e9d48f"   # spoke
+```bash
+terraform plan -destroy -out=tfplan ...
 ```
 
-### 3 — One-time feature registration (before module 07)
+The apply step always applies the generated `tfplan`, so it will destroy only when the saved plan is a destroy plan. Treat this as a destructive production operation: review the plan output carefully before permitting it to continue.
 
-Module 07 enables `encryption_at_host = true` on all VMs. Register the feature first:
+## Environment configuration
 
-```powershell
-az feature register --name EncryptionAtHost --namespace Microsoft.Compute
+The environment files are split into two levels:
 
-# Poll — must reach Registered (takes 10-15 min)
-az feature show --name EncryptionAtHost --namespace Microsoft.Compute --query properties.state -o tsv
-
-az provider register --namespace Microsoft.Compute
-```
-
-### 4 — AVD service principal object ID (for modules 05 and 08)
-
-```powershell
-az ad sp show --id 9cdead84-a844-4324-93f2-b2e6bb768d07 --query id -o tsv
-```
-
-Use this value for `scaling_plan_sp_id` (module 05) and `scaling_plan_service_principal_id` (module 08).
-
-### 5 — AVD user group
-
-Create the Entra ID security group if it does not already exist:
-
-```powershell
-az ad group create --display-name "avdusergrp" --mail-nickname "avdusergrp"
-# For dev: use "avdusergrp-dev"
-```
-
-### 6 — Hub prerequisites
-
-Before running any module, confirm the following exist in the hub subscription:
-- VNet (e.g. `vnet-hub-aus`) in a resource group (e.g. `rg-hub-aus`)
-- Azure Firewall with a known private IP (e.g. `10.0.0.4`)
-- Azure Firewall Policy (e.g. `afwp-hub-aus`)
-- All four private DNS zones in `rg-privatedns` (see section above)
-
-### 7 — Remote state backend (recommended for pipelines)
-
-```powershell
-az group create -n rg-terraform-state -l australiaeast
-az storage account create -n sttfstate<suffix> -g rg-terraform-state --sku Standard_LRS --min-tls-version TLS1_2
-az storage container create -n tfstate --account-name sttfstate<suffix>
-```
-
-Then uncomment the `backend "azurerm"` block in each module's `providers.tf`.
-
----
-
-## Step-by-Step Deployment
-
-Replace `<env>` with `dev`, `nonprod`, or `prod`.
-
-> **Important conventions:**
-> - `vm_password` is always passed as a `-var` flag or pipeline secret — **never stored in tfvars**
-> - Module 07 auto-reads `hostpool_name` and `registration_token` directly from `../05-avd-hostpool/terraform.tfstate` — no manual passing needed
-> - Always generate a fresh plan immediately before applying — never reuse stale `.tfplan` files
-> - `app_name` in modules 05 and 07 must match exactly for each application deployment
-
----
-
-### Module 01 — Resource Groups
-
-**Creates:** `rg-avd-<prefix>-<env>-<location>-service-objects`, `-storage`, `-pool-compute`, `rg-avd-<env>-<location>-monitoring`
-
-```powershell
-Set-Location ".\01-resource-groups"
-terraform init
-terraform plan  -var-file="<env>.tfvars" -out="tfplan"
-terraform apply "tfplan"
-terraform output
-```
-
-**Outputs used by later modules:**
-
-| Output | Consumed by |
-|--------|-------------|
-| `rg_service_objects_name` | 04, 05 |
-| `rg_storage_name` | 06 |
-| `rg_compute_name` | 07 |
-| `rg_monitoring_name` | 03 |
-| `rg_compute_id` | 08 |
-
----
-
-### Module 02 — Network
-
-**Creates:** VNet, session-host subnet (`snet-avd-hp`), PE subnet (`snet-avd-pe`, with Storage + KV service endpoints), NSG, route table (next hop → firewall), hub↔spoke VNet peering
-
-> **Timing note:** VNet peering may fail with `ReferencedResourceNotProvisioned` if subnets are still provisioning. Re-run `terraform apply` — it is idempotent.
-
-```powershell
-Set-Location "..\02-network"
-terraform init
-terraform plan  -var-file="<env>.tfvars" -out="tfplan"
-terraform apply "tfplan"
-terraform apply "tfplan"   # safe to re-run if peering 400 occurs
-terraform output
-```
-
-**Outputs used by later modules:**
-
-| Output | Consumed by |
-|--------|-------------|
-| `subnet_id` | 07 |
-| `pesubnet_id` | 04, 05, 06 |
-| `vnet_id` | 04, 05, 06 (DNS VNet links) |
-
----
-
-### Module 03 — Monitoring
-
-**Creates:** Log Analytics workspace `log-avd-<env>-<location>`
-
-```powershell
-Set-Location "..\03-monitoring"
-terraform init
-terraform plan  -var-file="<env>.tfvars" -out="tfplan"
-terraform apply "tfplan"
-terraform output
-```
-
-| Output | Consumed by |
-|--------|-------------|
-| `log_analytics_workspace_id` | 05 (host pool / app group / workspace diagnostics) |
-
----
-
-### Module 04 — Key Vault
-
-**Creates:** Key Vault (Premium, RBAC-enabled), RSA-4096 CMK key, VM admin password secret, KV private endpoint in PE subnet, VNet link for `privatelink.vaultcore.azure.net` in hub
-
-> **Azure Policy note:** Some environments enforce `publicNetworkAccess = Disabled` on Key Vaults via policy (common in MCAP / Azure Landing Zone tenants). This blocks the Terraform runner from creating the CMK key and VM password secret. The KV, PE, and DNS VNet link are still created successfully.
->
-> Complete key and secret creation from **within the spoke VNet** (Azure Bastion / jump box / self-hosted runner):
-> ```powershell
-> az keyvault key create   --vault-name <kv-name> --name avd-cmk-key --kty RSA --size 4096
-> az keyvault secret set   --vault-name <kv-name> --name avd-local-admin-password --value "<password>"
-> ```
-> The `vm_password_value` output still works — the `random_password` value is stored in TF state.
-
-**Key tfvars values:**
-
-| Variable | Example | Description |
-|----------|---------|-------------|
-| `hub_subscription_id` | `aa99492d-...` | Hub sub — for DNS zone data block |
-| `hub_dns_zone_rg` | `rg-privatedns` | RG containing `privatelink.vaultcore.azure.net` |
-| `rg_service_objects_name` | `rg-avd-poc1-prod-...-service-objects` | From module 01 |
-| `pesubnet_id` | `.../snet-avd-pe-austr-poc1-001` | From module 02 |
-| `spoke_vnet_id` | `.../vnet-avd-austr-poc1-001` | From module 02 |
-| `allow_list_ip` | `["58.6.207.139"]` | Runner public IP for KV firewall |
-
-```powershell
-Set-Location "..\04-keyvault"
-terraform init
-terraform plan  -var-file="<env>.tfvars" -out="tfplan"
-terraform apply "tfplan"
-terraform output -raw vm_password_value   # sensitive — copy to pipeline secret
-```
-
-| Output | Consumed by |
-|--------|-------------|
-| `vm_password_value` *(sensitive)* | 07 — store in `$env:TF_VAR_vm_password` |
-
----
-
-### Module 05 — AVD Host Pool *(per-app)*
-
-**Creates:**
-- Host pool (Pooled, BreadthFirst, Entra SSO, `publicNetworkAccess = Disabled`)
-- Desktop application group (assigns `Desktop Virtualization User` role to user group)
-- Workspace (`public_network_access_enabled = false`)
-- Scaling plan (AUS Eastern timezone, weekday schedule 7am–7pm)
-- Diagnostics storage account (private, no public access)
-- **3 private endpoints:** workspace `feed`, workspace `global`, hostpool `connection`
-- **2 DNS VNet links** in hub: `privatelink.wvd.microsoft.com`, `privatelink-global.wvd.microsoft.com`
-- `null_resource` to patch host pool `publicNetworkAccess = Disabled` via `az rest` (AVM v0.4.0 workaround)
-
-> **Run once per application.** Change `app_name` for each app. The same foundation modules (01-04, 06) are shared across all apps.
-
-**Key tfvars values:**
-
-| Variable | Example | Description |
-|----------|---------|-------------|
-| **`app_name`** | `ops` | Short app identifier — max 8 lowercase alphanumeric chars |
-| `prefix` | `poc1` | Environment prefix |
-| `hub_subscription_id` | `aa99492d-...` | Hub sub — for DNS zone data blocks |
-| `hub_dns_zone_rg` | `rg-privatedns` | Hub RG containing AVD private DNS zones |
-| `rg_service_objects_name` | `rg-avd-poc1-prod-...-service-objects` | From module 01 |
-| `log_analytics_workspace_id` | `.../Microsoft.OperationalInsights/workspaces/log-avd-prod-...` | From module 03 — **use proper casing** |
-| `pesubnet_id` | `.../snet-avd-pe-austr-poc1-001` | From module 02 |
-| `spoke_vnet_id` | `.../vnet-avd-austr-poc1-001` | From module 02 |
-| `scaling_plan_sp_id` | `6774ae85-...` | AVD service principal object ID |
-| `user_group_name` | `avdusergrp` | Entra ID security group for AVD users |
-
-```powershell
-Set-Location "..\05-avd-hostpool"
-terraform init
-terraform plan  -var-file="<env>.tfvars" -out="tfplan"
-terraform apply "tfplan"
-terraform output
-```
-
-| Output | Consumed by |
-|--------|-------------|
-| `hostpool_name` | 07 (auto-read from TF state) |
-| `registration_token` *(sensitive)* | 07 (auto-read from TF state) |
-| `application_group_id` | 08 |
-
----
-
-### Module 06 — FSLogix Storage
-
-**Creates:** Premium FileStorage account (AADKERB, shared access keys off, private-only), FSLogix file share (`fslogix`), private endpoint in PE subnet, VNet link for `privatelink.file.core.windows.net` in hub
-
-**Key tfvars values:**
-
-| Variable | Example | Description |
-|----------|---------|-------------|
-| `hub_subscription_id` | `aa99492d-...` | Hub sub — for DNS zone data block |
-| `hub_dns_zone_rg` | `rg-privatedns` | RG containing `privatelink.file.core.windows.net` |
-| `rg_storage_name` | `rg-avd-poc1-prod-...-storage` | From module 01 |
-| `pesubnet_id` | `.../snet-avd-pe-austr-poc1-001` | From module 02 |
-| `spoke_vnet_id` | `.../vnet-avd-austr-poc1-001` | From module 02 |
-| `fslogix_share_quota_gb` | `100` | FSLogix share quota in GB |
-
-```powershell
-Set-Location "..\06-storage"
-terraform init
-terraform plan  -var-file="<env>.tfvars" -out="tfplan"
-terraform apply "tfplan"
-terraform output   # note storage_account_name for module 07
-```
-
-| Output | Consumed by |
-|--------|-------------|
-| `storage_account_name` | 07 (`fslogix_storage_account_name`) |
-| `storage_account_id` | 08 |
-
----
-
-### Module 07 — Session Hosts *(per-app)*
-
-**Creates:** Network interfaces, Windows 11 24H2 AVD VMs (`encryption_at_host = true`), AADLoginForWindows extension, DSC AVD agent registration extension, **FSLogix registry configuration** via Custom Script Extension
-
-**FSLogix configuration applied:**
-
-| Registry Key | Value | Effect |
+| File type | Example | Used for |
 |---|---|---|
-| `Enabled` | `1` | Activates FSLogix containers |
-| `VHDLocations` | `\\<storage>.file.core.windows.net\fslogix` | Profile share UNC path |
-| `DeleteLocalProfileWhenVHDShouldApply` | `1` | Removes stale local profiles |
-| `FlipFlopProfileDirectoryName` | `1` | Username-first folder naming |
-| `PreventLoginWithFailure` | `1` | Blocks login if mount fails |
-| `PreventLoginWithTempProfile` | `1` | Blocks temp profile login |
-| `IsDynamic` | `1` | VHD grows on demand |
+| Azure DevOps variable template | `_environment/vars-npd.yml` | Pipeline-only values such as deployment subscription, state subscription, and backend storage account. |
+| Shared Terraform tfvars | `_environment/npd.tfvars` | Common Terraform inputs such as location, tenant, hub/spoke subscription IDs, shared resource group names, VNet name, DNS zone RG, PE subnet names, and tags. |
+| Module tfvars | `05-hostpool/npd.tfvars` | Module-specific inputs such as host pools, storage account names, Key Vault names, or subnet maps. |
 
-> **`app_name` must match module 05.**
->
-> VM `name` (e.g. `poc1-avd-ops-vm-1`) may exceed the 15-char Windows computer name limit. `computer_name` is set separately as `<prefix><app_name>vm<n>` (e.g. `poc1opsvm1`).
->
-> Module 07 auto-reads `hostpool_name` and `registration_token` from `../05-avd-hostpool/terraform.tfstate`. Override with `hostpool_state_path` for per-app state files.
+Terraform receives both tfvars files in this order:
 
-**Key tfvars values:**
-
-| Variable | Example | Description |
-|----------|---------|-------------|
-| **`app_name`** | `ops` | Must match `app_name` used in module 05 |
-| `rdsh_count` | `2` | Number of session host VMs |
-| `vm_size` | `Standard_D2s_v5` | VM SKU |
-| `rg_compute_name` | `rg-avd-poc1-prod-...-pool-compute` | From module 01 |
-| `subnet_id` | `.../snet-avd-hp-austr-poc1-001` | From module 02 |
-| `fslogix_storage_account_name` | `stavdpoc1t77j` | From module 06 `storage_account_name` output |
-| `fslogix_share_name` | `fslogix` | Default — matches module 06 |
-| `fslogix_profile_size_mb` | `30720` | Max profile VHD size (30 GB default) |
-
-**Sensitive — pass via `-var` or env var only:**
-
-| Variable | How to obtain |
-|----------|---------------|
-| `vm_password` | `terraform -chdir="..\04-keyvault" output -raw vm_password_value` |
-
-```powershell
-Set-Location "..\07-session-hosts"
-terraform init
-
-# Capture VM password from module 04 state (or use pipeline secret)
-$env:TF_VAR_vm_password = (terraform -chdir="..\04-keyvault" output -raw vm_password_value)
-
-terraform plan  -var-file="<env>.tfvars" -out="tfplan"
-terraform apply "tfplan"
-terraform output
+```text
+terraform plan \
+  -var-file=../_environment/<env>.tfvars \
+  -var-file=<env>.tfvars
 ```
 
-**VM lifecycle protection — `ignore_changes` prevents accidental recreation:**
-- `admin_password` — password rotations handled outside Terraform
-- `name`, `computer_name`, `os_disk` — prefix/app_name changes do **not** recreate VMs
-- `source_image_reference` — image updates do **not** recreate VMs
+If the same variable appears in both files, the module-level tfvars value wins because it is loaded later.
 
-To intentionally replace a VM: `terraform taint azurerm_windows_virtual_machine.avd_vm[<index>]`
+## Module details
 
----
+### `02-network`
 
-### Module 08 — RBAC *(per-app)*
+This module works against an existing resource group and VNet. It does not create the VNet. It creates and configures subnets from the `subnets` map in `02-network/npd.tfvars`.
 
-**Creates:** 3 role assignments:
-1. `Virtual Machine User Login` on the compute resource group → AVD user group
-2. `Storage File Data SMB Share Contributor` on the FSLogix storage account → AVD user group
-3. `Desktop Virtualization Power On Off Contributor` on the compute resource group → AVD scaling plan SP
+It can create, per subnet:
 
-> `Desktop Virtualization User` on the app group is managed by module 05 (AVM applicationgroup module) — it is **intentionally absent** from module 08 to avoid 409 conflicts.
+| Resource | Behavior |
+|---|---|
+| `azurerm_subnet.this` | Creates each subnet from `var.subnets`, including address prefixes, service endpoints, private endpoint policies, private link service policies, and optional delegations. |
+| `azurerm_network_security_group.subnet` | Creates an NSG only when `subnet.nsg.create = true`. |
+| `azurerm_network_security_rule.subnet` | Flattens each subnet's `security_rules` map into individual NSG rule resources. |
+| `azurerm_subnet_route_table_association.this` | Associates a subnet to an existing route table when `route_table_name` is set. |
+| `azurerm_subnet_network_security_group_association.this` | Associates either the newly created NSG or an existing NSG ID. |
 
-**Key tfvars values:**
+#### Complex sections
 
-| Variable | Example | Description |
-|----------|---------|-------------|
-| `user_group_name` | `avdusergrp` | Entra ID security group for AVD users |
-| `scaling_plan_service_principal_id` | `6774ae85-...` | AVD SP object ID |
-| `rg_compute_id` | `.../rg-avd-poc1-prod-...-pool-compute` | From module 01 |
+The `locals` block builds three derived maps from `var.subnets`:
 
-```powershell
-Set-Location "..\08-rbac"
-terraform init
+| Local | Why it exists |
+|---|---|
+| `subnet_route_table_names` | Filters only subnets that specify a non-empty route table name. |
+| `subnet_nsg_associations` | Filters only subnets that need an NSG association, whether the NSG is newly created or existing. |
+| `subnet_nsg_rules` | Flattens nested subnet rule maps into unique keys like `<subnet>.<rule>`, which Terraform can use with `for_each`. |
 
-$appGrpId = terraform -chdir="..\05-avd-hostpool" output -raw application_group_id
-$storId   = terraform -chdir="..\06-storage"     output -raw storage_account_id
+The NSG rule resource also contains fallback logic for singular vs plural Terraform fields. For example, if neither `source_port_range` nor `source_port_ranges` is set, it defaults to `"*"`. This keeps tfvars concise while still supporting both single-value and list-based rule definitions.
 
-terraform plan  -var-file="<env>.tfvars" `
-  -var "application_group_id=$appGrpId" `
-  -var "storage_account_id=$storId" `
-  -out="tfplan"
+### `03-service-objects`
 
-terraform apply "tfplan"
-```
+This module creates common service objects used by later AVD modules.
 
----
+It creates:
 
-## Complete End-to-End Deploy Script
+| Resource | Purpose |
+|---|---|
+| Service objects resource group | Holds shared AVD service resources. |
+| AVD workspace | Created through the AVM desktop virtualization workspace module with public network access disabled. |
+| Workspace private endpoint | Uses the `feed` subresource and links to the hub `privatelink.wvd.microsoft.com` private DNS zone. |
+| AVD service-principal role assignments | Grants the AVD service principal Reader, Power On/Off Contributor, Virtual Machine Contributor, and Network Contributor at subscription scope. |
 
-```powershell
-param(
-    [string]$Env     = "prod",
-    [string]$AppName = "ops"   # change for each application
-)
+#### Complex sections
 
-$base = Split-Path -Parent $MyInvocation.MyCommand.Path
+The private endpoint subnet ID is assembled as a string from subscription, resource group, VNet, and subnet variables. This lets the module target an existing network without needing a direct `azurerm_subnet` data lookup.
 
-# ── Foundation modules (run once per environment) ─────────────────────────────
-foreach ($m in @("01-resource-groups","02-network","03-monitoring","04-keyvault","06-storage")) {
-    Write-Host "`n=== $m ===" -ForegroundColor Cyan
-    Set-Location "$base\$m"
-    terraform init -upgrade
-    terraform apply -var-file="$Env.tfvars" -auto-approve -input=false
-}
+The role assignments use `skip_service_principal_aad_check = true`. This is commonly needed for Microsoft service principals because the AzureAD check can fail even when the object ID is valid and Azure Resource Manager can assign the role.
 
-# Capture VM password from module 04 state
-$vmPass = terraform -chdir="$base\04-keyvault" output -raw vm_password_value
+### `04-keyvault`
 
-# ── Per-app modules (run once per application) ────────────────────────────────
-Write-Host "`n=== 05-avd-hostpool ($AppName) ===" -ForegroundColor Cyan
-Set-Location "$base\05-avd-hostpool"
-terraform init -upgrade
-terraform apply -var-file="$Env.tfvars" -auto-approve -input=false
+This module creates the Key Vault used by AVD automation and session host admin credentials.
 
-Write-Host "`n=== 07-session-hosts ($AppName) ===" -ForegroundColor Cyan
-Set-Location "$base\07-session-hosts"
-terraform init -upgrade
-terraform apply -var-file="$Env.tfvars" -var "vm_password=$vmPass" -auto-approve -input=false
+It creates:
 
-# ── RBAC (per-app) ─────────────────────────────────────────────────────────────
-Write-Host "`n=== 08-rbac ($AppName) ===" -ForegroundColor Cyan
-$appGrpId = terraform -chdir="$base\05-avd-hostpool" output -raw application_group_id
-$storId   = terraform -chdir="$base\06-storage"      output -raw storage_account_id
-Set-Location "$base\08-rbac"
-terraform init -upgrade
-terraform apply -var-file="$Env.tfvars" `
-  -var "application_group_id=$appGrpId" `
-  -var "storage_account_id=$storId" `
-  -auto-approve -input=false
+| Resource | Purpose |
+|---|---|
+| Random password | Generates the local administrator password. |
+| Key Vault | Created through the AVM Key Vault module with public network access disabled. |
+| Key Vault private endpoint | Uses the hub `privatelink.vaultcore.azure.net` private DNS zone. |
+| `time_sleep` delay | Waits before creating secrets so the private endpoint and DNS path can settle. |
+| AVD Key Vault role assignment | Grants the AVD service principal `Key Vault Secrets User`. |
+| Username and password secrets | Stores local admin username and generated password in Key Vault. |
 
-Write-Host "`nDeployment complete!" -ForegroundColor Green
-```
+#### Complex sections
 
----
+Key Vault is private-only, so data-plane operations such as secret creation depend on private endpoint DNS and routing being available from the runner. The explicit `time_sleep` is a pragmatic delay to reduce failures immediately after private endpoint creation.
 
-## Destroying All Resources
+The secret resources use `lifecycle.ignore_changes` for `value` and `tags`. This prevents later Terraform runs from rotating or rewriting the stored credentials unintentionally. If the password must be rotated, update the Terraform intentionally rather than relying on incidental drift.
 
-Run modules in **reverse order** (08 → 01).
+The commented CMK key block documents why key creation may need to be performed from inside the spoke network when policy forces `publicNetworkAccess = Disabled`.
 
-> `prevent_destroy = true` is set on critical resources (all RGs, VNet, FSLogix storage, session host VMs). Temporarily disable before destroying:
->
-> ```powershell
-> $base = "C:\path\to\AVD-Modules"
->
-> # Disable prevent_destroy
-> Get-ChildItem "$base\*\main.tf" | ForEach-Object {
->     (Get-Content $_.FullName -Raw) -replace 'prevent_destroy = true','prevent_destroy = false' |
->     Set-Content $_.FullName -NoNewline
-> }
->
-> # ... run destroy commands below ...
->
-> # Restore prevent_destroy
-> Get-ChildItem "$base\*\main.tf" | ForEach-Object {
->     (Get-Content $_.FullName -Raw) -replace 'prevent_destroy = false','prevent_destroy = true' |
->     Set-Content $_.FullName -NoNewline
-> }
-> ```
+### `06-storage`
 
-```powershell
-$Env    = "prod"
-$vmPass = $env:AVD_VM_PASSWORD
+This module creates private storage for FSLogix profiles plus a general-purpose storage account.
 
-foreach ($m in @("08-rbac","07-session-hosts","06-storage","05-avd-hostpool",
-                  "04-keyvault","03-monitoring","02-network","01-resource-groups")) {
-    Write-Host "`n=== Destroying $m ===" -ForegroundColor Yellow
-    Set-Location "$base\$m"
-    $extraVars = if ($m -eq "07-session-hosts") { @("-var","vm_password=$vmPass") } else { @() }
-    terraform destroy -var-file="$Env.tfvars" @extraVars -auto-approve -input=false
-}
-```
+It creates:
 
----
+| Resource | Purpose |
+|---|---|
+| FSLogix managed identity | User-assigned identity attached to the FSLogix storage account. |
+| General storage managed identity | User-assigned identity attached to the general storage account. |
+| FSLogix FileStorage account | Premium FileStorage account created with AzAPI. |
+| FSLogix file share | SMB file share for profile containers. |
+| General StorageV2 account | General-purpose storage account created with AzAPI. |
+| File private endpoint | Private endpoint for the FSLogix `file` subresource. |
+| Blob private endpoint | Private endpoint for the general storage `blob` subresource. |
+| Storage network rules | Denies public/default network access after private endpoints exist. |
+| FSLogix share role assignment | Grants the configured Entra group `Storage File Data SMB Share Contributor`. |
 
-## Reference Environment
+#### Complex sections
 
-| Parameter | Value |
-|-----------|-------|
-| `avdLocation` | `australiaeast` |
-| `prefix` | `poc1` |
-| `environment` | `prod` |
-| `app_name` | `ops` *(example — change per application)* |
-| `spoke_subscription_id` | `05e200dc-cec4-4234-8142-d2fe12e9d48f` |
-| `hub_subscription_id` | `aa99492d-2efe-4d6e-995c-ec734bd0cbb3` |
-| `identity_subscription_id` | `04106d48-c492-472b-b3ae-4cb333e60061` |
-| `tenant_id` | `d4b3cf5c-e7a8-4dbb-8d89-603066a7f185` |
-| `hub_dns_zone_rg` | `rg-privatedns` |
-| Service Objects RG | `rg-avd-poc1-prod-australiaeast-service-objects` |
-| Compute RG | `rg-avd-poc1-prod-australiaeast-pool-compute` |
-| Storage RG | `rg-avd-poc1-prod-australiaeast-storage` |
-| Monitoring RG | `rg-avd-prod-australiaeast-monitoring` |
-| Network RG | `rg-avd-austr-poc1-network` |
-| VNet | `vnet-avd-austr-poc1-001` (10.100.1.0/24) |
-| Session Host Subnet | `snet-avd-hp-austr-poc1-001` (10.100.1.0/26) |
-| PE Subnet | `snet-avd-pe-austr-poc1-001` (10.100.1.192/27) |
-| Hub VNet | `vnet-hub-aus` (10.0.0.0/16) |
-| Firewall private IP | `10.0.0.4` |
-| Key Vault | `kv-avd-poc1-<suffix>` |
-| FSLogix Storage | `stavdpoc1<suffix>` |
-| Host Pool (ops) | `vdpool-poc1-ops-prod-australiaeast` |
-| Workspace (ops) | `vdws-poc1-ops-prod-australiaeast` |
-| Session Hosts (ops) | `poc1-avd-ops-vm-1`, `poc1-avd-ops-vm-2` |
-| Computer Names (ops) | `poc1opsvm1`, `poc1opsvm2` |
-| AVD SP Object ID | `6774ae85-d784-4d45-9585-876477e8f6b7` |
+The storage accounts are created with `azapi_resource` instead of only `azurerm_storage_account`. This gives direct control of newer ARM properties, including identity-based Azure Files authentication and hardened storage settings.
 
----
+The FSLogix identity authentication block is conditional. If `fslogix_identity_auth_directory_service` is set, the module writes `azureFilesIdentityBasedAuthentication`. If AD DS domain name and GUID are also supplied, it adds `activeDirectoryProperties`. If those inputs are null, identity auth is omitted.
 
-## Known Issues and Workarounds
+The network rules depend on the private endpoints. This sequencing avoids cutting off storage access before the private path exists.
 
-### Key Vault — `ForbiddenByConnection` (Azure Policy enforcement)
+### `07-image-gallery`
 
-Azure Policy in governance-managed environments enforces `publicNetworkAccess = Disabled` on Key Vaults. The Terraform runner cannot create the CMK key or VM password secret from an external IP. The KV itself, its PE, and DNS VNet link are created successfully. Complete key and secret from within the spoke VNet:
+This module prepares Azure Compute Gallery resources and Azure Image Builder permissions.
 
-```powershell
-az keyvault key create   --vault-name <kv-name> --name avd-cmk-key --kty RSA --size 4096
-az keyvault secret set   --vault-name <kv-name> --name avd-local-admin-password --value "<password>"
-```
+It creates:
 
-### Module 02 — VNet peering `ReferencedResourceNotProvisioned`
+| Resource | Purpose |
+|---|---|
+| Image gallery resource group | Holds the gallery and image builder identity. |
+| Azure Compute Gallery | Shared image gallery for custom images. |
+| Gallery image definition | Windows Gen2 image definition using publisher, offer, and SKU from tfvars. |
+| AIB user-assigned identity | Identity used by Azure Image Builder. |
+| Network Contributor assignment | Lets the AIB identity use the existing VNet. |
+| Custom AIB role definition | Grants only the resource group operations needed for image build and gallery version publication. |
+| Custom role assignment | Assigns the custom role to the AIB identity. |
 
-Subnets may still be in `Updating` state when peering starts. Re-run `terraform apply` — subnets will be in `Succeeded` and peering will succeed.
+#### Complex sections
 
-### Module 05 — Log Analytics workspace ID casing
+The custom role definition is scoped to the image gallery resource group rather than the subscription. This reduces blast radius while still granting the Image Builder identity the required compute, gallery, storage, container instance, managed identity, deployment, and VNet join actions.
 
-The Log Analytics workspace ID in `prod.tfvars` must use proper casing (`Microsoft.OperationalInsights`). Lowercase (`microsoft.operationalinsights`) causes the AVM diagnostic settings parser to fail:
+The module reads the existing VNet and grants the AIB identity `Network Contributor` there. This is required when image builds need to run in the private network.
 
-```
-✗ /providers/microsoft.operationalinsights/workspaces/log-...   (fails)
-✓ /providers/Microsoft.OperationalInsights/workspaces/log-...   (correct)
-```
+### `05-hostpool`
 
-### Module 05 — Entra SSO RDP flags
+This is the most complex included module. It creates one or more AVD host pools from the `host_pools` list in `05-hostpool/npd.tfvars`.
 
-The AVM host pool module's typed `custom_rdp_properties` object silently drops unknown keys. The Entra SSO flags **must** go in the `custom_properties` free-form map:
+It creates per host pool:
 
-```hcl
-virtual_desktop_host_pool_custom_rdp_properties = {
-  custom_properties = {
-    "enablerdsaadauth"  = "i:1"
-    "targetisaadjoined" = "i:1"
-  }
-}
-```
+| Resource | Purpose |
+|---|---|
+| Compute resource group | Created through `terraform_data` and `az rest`. |
+| Host pool | Created with AzAPI against `Microsoft.DesktopVirtualization/hostPools@2026-04-01-preview`. |
+| System-assigned host pool identity | Used for automated management actions. |
+| Session host configuration | Defines VM image, size, network, credentials, tags, domain join type, security settings, and optional bootstrap script. |
+| Session host management | Configured through `az rest` because it uses preview API functionality. |
+| Application group | Desktop or RemoteApp group. |
+| Remote apps | Created only when a host pool's app group type is `RemoteApp`. |
+| AVD user role assignment | Grants the configured Entra group access to the application group. |
+| VM User Login assignment | Grants the configured Entra group VM login rights on the compute resource group. |
+| Workspace association | Publishes the application group into the shared workspace. |
+| Host pool private endpoint | Creates the `connection` private endpoint in the configured host pool PE subnet. |
+| Dynamic scaling plan | Creates a pooled autoscale plan with schedules from module defaults or per-host-pool overrides. |
 
-### Module 05 — Host pool public access (AVM v0.4.0 limitation)
+#### Complex sections
 
-`avm-res-desktopvirtualization-hostpool` v0.4.0 does not expose `public_network_access`. A `null_resource` uses `az rest PATCH` to set `publicNetworkAccess = Disabled` after creation. Upgrade the AVM module to v0.5.0+ to replace this with a declarative parameter.
+The `locals` block is the main shaping layer. It merges global defaults with each object in `var.host_pools`, then builds the exact nested payloads required by the AVD preview API. This lets simple tfvars entries create full automated host pool definitions.
 
-### Module 07 — DSC extension perpetual diff
+`default_vm_admin_credentials` builds Key Vault secret URIs when `session_host_vm_admin_credentials` is not supplied. This allows host pools to retrieve the username and password created by `04-keyvault` without copying secret values into tfvars.
 
-After initial AVD agent registration, the DSC `protected_settings` show drift on every plan. `lifecycle { ignore_changes = [protected_settings] }` suppresses this.
+`session_host_configuration` is merged in several passes:
 
-### Module 08 — Role assignment 409 (Desktop Virtualization User)
+1. Start with module defaults for disk, security, boot diagnostics, domain join, credentials, and VM location.
+2. Overlay any per-host-pool `session_host_configuration` values from tfvars.
+3. Force the subnet ID and merged VM tags from standard variables.
+4. Add `customConfigurationScriptUrl` only when one is provided.
 
-`Desktop Virtualization User` is now assigned by module 05. If it previously existed in module 08 state, remove it:
+The compute resource group is created through `terraform_data` with a `local-exec` `az rest` call. This is unusual but allows the module to create or update the resource group using a deterministic ARM PUT payload before reading it back with `data.azurerm_resource_group.compute`.
 
-```powershell
-Set-Location ".\08-rbac"
-terraform state rm azurerm_role_assignment.avd_desktop_user
-```
+The host pool, session host configuration, session host management, and scaling plan use `azapi_resource` or `az rest` because they depend on the `2026-04-01-preview` Desktop Virtualization API. The standard AzureRM provider may not expose these properties yet.
 
----
+The host pool managed identity receives these permissions before session host management is configured:
 
-## AVM Module Versions
+| Scope | Role |
+|---|---|
+| Compute resource group | `Desktop Virtualization Virtual Machine Contributor` |
+| VNet | `Network Contributor` |
+| Subscription | `Reader` |
+| Key Vault | `Key Vault Secrets User` |
 
-| AVM Module | Version | Used In |
-|-----------|---------|---------|
-| `Azure/avm-res-keyvault-vault/azurerm` | `0.5.3` | 04-keyvault |
-| `Azure/avm-res-operationalinsights-workspace/azurerm` | `0.1.3` | 03-monitoring |
-| `Azure/avm-res-desktopvirtualization-hostpool/azurerm` | `0.4.0` | 05-avd-hostpool |
-| `Azure/avm-res-desktopvirtualization-applicationgroup/azurerm` | `0.2.1` | 05-avd-hostpool |
-| `Azure/avm-res-desktopvirtualization-workspace/azurerm` | `0.2.2` | 05-avd-hostpool |
-| `Azure/avm-res-desktopvirtualization-scalingplan/azurerm` | `0.2.1` | 05-avd-hostpool |
+Those assignments are dependencies for the automated session host configuration because the AVD service needs to create, update, read, and manage session hosts and retrieve local admin credentials.
 
----
+The scaling plan has `lifecycle.ignore_changes = [body]`. This avoids Terraform churn when Azure normalizes or changes preview API payloads after creation, but it also means schedule/body changes may not be detected as normal drift.
 
-## Provider Versions
+## Private endpoint and DNS requirements
 
-| Provider | Constraint | Used In |
-|----------|-----------|---------|
-| `hashicorp/azurerm` | `~> 4.78.0` | all modules |
-| `hashicorp/azuread` | `~> 3.9.0` | 04, 05, 08 |
-| `hashicorp/http` | `~> 3.0` | 04 (runner IP auto-detection) |
-| `hashicorp/random` | `~> 3.9.0` | 04, 05, 06 |
-| `hashicorp/time` | `~> 0.14.0` | 07 (token rotation anchor) |
-| `hashicorp/null` | `~> 3.0` | 05 (host pool public access patch) |
+The included modules assume hub private DNS zones already exist and are readable from the hub provider.
+
+| DNS zone | Used by | Module |
+|---|---|---|
+| `privatelink.wvd.microsoft.com` | AVD workspace feed and host pool connection private endpoints | `03-service-objects`, `05-hostpool` |
+| `privatelink.vaultcore.azure.net` | Key Vault private endpoint | `04-keyvault` |
+| `privatelink.file.core.windows.net` | FSLogix Azure Files private endpoint | `06-storage` |
+| `privatelink.blob.core.windows.net` | General storage blob private endpoint | `06-storage` |
+
+The modules do not create those private DNS zones. They read them with the hub provider and attach private endpoint DNS zone groups to them.
+
+## Current NPD shape
+
+The current NPD configuration includes:
+
+| Area | NPD values |
+|---|---|
+| Location | `australiaeast` |
+| Network RG | `rg-itm-network-npd` |
+| VNet | `vnet-itm-vnet-npd` |
+| Service objects RG | `rg-service-objects-npd` |
+| Workspace | `workspace-npd` |
+| Shared private endpoint subnet | `snet-general-pe` |
+| AVD user group | `avd_users_cloud` |
+| Key Vault | `kv-avd-itm-npd` |
+| FSLogix storage | `stavditmnpd001` |
+| General storage | `stgenitmnpd001` |
+| Image gallery RG | `rg-imagebuilder` |
+| Image gallery | `avd_image_gallery` |
+
+Configured NPD host pools:
+
+| Host pool | Type | RG | Session subnet | PE subnet | Notes |
+|---|---|---|---|---|---|
+| `pool-itm001` | Desktop | `rg-pool-itm001-npd` | `snet-itm-001` | `snet-itm-001-pe` | Uses bootstrap script URL `https://tfstore101.blob.core.windows.net/data/bootstrap-itm001.ps1`. |
+| `pool-itm002` | RemoteApp | `rg-pool-itm002-npd` | `snet-itm-002` | `snet-itm-002-pe` | Publishes Server Manager from `C:\Windows\System32\ServerManager.exe`. |
+
+## Operating the pipelines
+
+### Normal deploy
+
+1. Open the module pipeline, for example `05-hostpool/pipeline.yaml`.
+2. Run the pipeline manually.
+3. Select one or more environments with `deployNpd`, `deployUat`, or `deployPrd`.
+4. Leave `doDestroy=false`.
+5. Review the Terraform plan in the logs.
+6. Allow the apply step to complete.
+
+### Destroy
+
+1. Run the same module pipeline manually.
+2. Select the target environment.
+3. Set `doDestroy=true`.
+4. Review the destroy plan carefully.
+5. Allow the apply step only if the listed deletions are expected.
+
+Destroy is per module and per selected environment. Because each module has its own state key, destroying one module does not automatically destroy dependent modules in other state files.
+
+### Adding a new environment
+
+To add another environment following the current pattern:
+
+1. Add `_environment/vars-<env>.yml` for pipeline/backend values.
+2. Add `_environment/<env>.tfvars` for shared Terraform values.
+3. Add `<module>/<env>.tfvars` for every module that should support the environment.
+4. Extend `_common/terraform-environments.yml` with a new boolean parameter, service connection, stage block, state key prefix, variable template, and tfvars paths.
+5. Add the matching boolean parameter to each module `pipeline.yaml`.
+
+### Adding a new host pool
+
+For the current host pool pattern:
+
+1. Add session host and private endpoint subnets to `02-network/<env>.tfvars` if required.
+2. Run `02-network` for the target environment.
+3. Add another object to `05-hostpool/<env>.tfvars` under `host_pools`.
+4. Set a unique `name`, `resource_group_name`, `app_group_name`, `session_host_subnet_name`, and `hostpool_private_endpoint_subnet_name`.
+5. Choose `app_group_type = "Desktop"` or `"RemoteApp"`.
+6. If using RemoteApp, populate `remote_apps`.
+7. Run `05-hostpool` for the target environment.
+
+## Troubleshooting notes
+
+| Symptom | Likely cause | Action |
+|---|---|---|
+| `terraform fmt -check` fails | Terraform files are not formatted. | Run `terraform fmt -recursive` locally on the affected module and commit the formatting change. |
+| `terraform init` cannot reach backend | Service connection, state subscription, storage account, network route, or AzureAD auth issue. | Check `_environment/vars-<env>.yml`, service connection permissions, and runner network path. |
+| Private DNS zone data lookup fails | Required hub private DNS zone is missing or the hub provider cannot read it. | Confirm the zone exists in `hub_dns_zone_rg` and the service connection can read the hub subscription. |
+| Key Vault secret creation fails | Runner cannot reach the private-only Key Vault data plane yet. | Confirm private endpoint DNS/routing from the runner and rerun after DNS has propagated. |
+| Host pool session host automation fails | Host pool managed identity lacks required RBAC or Key Vault access. | Check role assignments in `05-hostpool` and `04-keyvault`, then rerun. |
+| Scaling plan updates do not appear in Terraform diff | `azapi_resource.dynamic_scaling_plan` ignores `body` changes. | Update intentionally and consider removing or temporarily adjusting ignore behavior if drift management is required. |
+| Route workaround fails in pipeline | The self-hosted runner cannot add or resolve the expected routes. | Check the runner image, permissions for `sudo ip route`, and whether the hardcoded IPs still apply. |
+
+## Important conventions
+
+- Keep module pipelines small and push common behavior into `_common`.
+- Keep shared values in `_environment/<env>.tfvars`; keep module-specific values in `<module>/<env>.tfvars`.
+- Do not store secrets in tfvars. This repository currently uses Key Vault secret URIs and generated secrets for session host local admin credentials.
+- Treat `doDestroy=true` as a production-risk operation.
+- Review generated plans because the apply step is non-interactive and uses `-auto-approve`.
+- Keep private DNS zones in the hub and reference them from modules; the included modules do not create those zones.
+- Be cautious when editing `05-hostpool`; much of it targets preview AVD API behavior through AzAPI and `az rest`.

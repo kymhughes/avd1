@@ -1,3 +1,7 @@
+# Creates Azure Compute Gallery prerequisites for custom AVD images.
+# This module prepares the gallery, image definition, Image Builder identity,
+# and tightly scoped permissions used by downstream image build workflows.
+
 provider "azurerm" {
   features {}
 }
@@ -46,12 +50,15 @@ resource "azurerm_user_assigned_identity" "aib" {
   tags                = var.tags
 }
 
+# Image Builder needs to join the existing VNet when builds run privately.
 resource "azurerm_role_assignment" "aib_network_contributor" {
   scope                = data.azurerm_virtual_network.existing.id
   role_definition_name = "Network Contributor"
   principal_id         = azurerm_user_assigned_identity.aib.principal_id
 }
 
+# Scope the custom role to the image gallery resource group to avoid granting
+# broad subscription-level image build permissions.
 resource "azurerm_role_definition" "aib" {
   name        = var.aib_role_definition_name
   scope       = azurerm_resource_group.image_gallery.id

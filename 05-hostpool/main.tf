@@ -1,4 +1,4 @@
-# ── AVD Host Pool, Application Group, Workspace, Scaling Plan ─────────────────
+# Creates automated AVD host pools and publishes their application groups.
 # Depends on: existing AVD workspace, Key Vault, private DNS zone, and network subnets.
 # Creates:   host pools, session host configuration, application groups, workspace
 #            associations, private endpoints, role assignments, and scaling plans.
@@ -22,7 +22,8 @@ data "azurerm_private_dns_zone" "avd_feed_dns" {
 }
 
 ###################################################################################
-#Assign nesssesary roles for each Session Pool Managed ID for dynamic autoscale to work
+# Assign necessary roles for each host pool managed identity so automated
+# session host provisioning, networking, Key Vault access, and autoscale can work.
 ###################################################################################
 
 # resource group VM Contributor
@@ -61,6 +62,8 @@ resource "azurerm_role_assignment" "host_pool_mi_keyvault_secrets_user" {
 
 
 locals {
+  # Default secret URIs point to the secrets created by 04-keyvault. A caller can
+  # override the full credentials object when a different secret layout is needed.
   default_vm_admin_credentials = coalesce(var.session_host_vm_admin_credentials, {
     usernameKeyVaultSecretUri = "https://${var.key_vault_name}.vault.azure.net/secrets/vm-local-admin-username"
     passwordKeyVaultSecretUri = "https://${var.key_vault_name}.vault.azure.net/secrets/local-password"
@@ -89,6 +92,8 @@ locals {
     dynamic_scaling_plan_schedules         = null
   }
 
+  # Merge global defaults, each host pool object, and computed network/tag values
+  # into the preview API payload shape expected by sessionHostConfigurations.
   host_pools_from_var = {
     for host_pool in var.host_pools : host_pool.name => merge(
       local.host_pool_defaults,
@@ -128,6 +133,8 @@ locals {
 
   host_pools = local.host_pools_from_var
 
+  # Remote apps are defined per host pool in tfvars, but the AzureRM resource
+  # needs a flat map with stable keys.
   remote_apps = flatten([
     for host_pool_name, host_pool in local.host_pools : [
       for app in host_pool.remote_apps : merge(app, {
@@ -144,6 +151,8 @@ data "azuread_group" "avd_users" {
   security_enabled = true
 }
 
+# Resource groups are created through ARM PUT because the automated host pool
+# flow uses preview APIs that are already being driven with azapi/az rest.
 resource "terraform_data" "compute_resource_group" {
   for_each = local.host_pools
 
@@ -183,6 +192,8 @@ data "azurerm_resource_group" "compute" {
   ]
 }
 
+# Host pools use the Desktop Virtualization preview API because automated
+# session host management settings are not fully exposed in the stable provider.
 resource "azapi_resource" "host_pool" {
   for_each = local.host_pools
 
@@ -223,6 +234,8 @@ resource "azapi_resource" "host_pool" {
   }
 }
 
+# The "default" session host configuration defines image, VM size, network,
+# credentials, security profile, tags, and optional bootstrap script per pool.
 resource "azapi_resource" "session_host_configuration" {
   for_each = local.host_pools
 
@@ -242,6 +255,8 @@ resource "azapi_resource" "session_host_configuration" {
   ]
 }
 
+# Session host management is currently configured with az rest so the module can
+# set preview-only provisioning and update behavior.
 resource "terraform_data" "session_host_management" {
   for_each = local.host_pools
 
@@ -356,6 +371,7 @@ resource "azurerm_virtual_desktop_workspace_application_group_association" "this
   application_group_id = azurerm_virtual_desktop_application_group.this[each.key].id
 }
 
+# The host pool connection endpoint keeps session host broker traffic private.
 resource "azurerm_private_endpoint" "hostpool_connection" {
   for_each = {
     for name, host_pool in local.host_pools : name => host_pool
@@ -387,6 +403,8 @@ resource "azurerm_private_endpoint" "hostpool_connection" {
 
 
 
+# Dynamic scaling plans also use the preview API. Azure may normalize the body
+# after creation, so drift on the body is ignored to avoid noisy plans.
 resource "azapi_resource" "dynamic_scaling_plan" {
   for_each = {
     for name, host_pool in local.host_pools : name => host_pool

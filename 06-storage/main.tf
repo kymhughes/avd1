@@ -1,4 +1,6 @@
-# ── Simple storage example: FSLogix Azure Files + general blob storage ────────
+# Creates private storage for FSLogix profiles and general blob workloads.
+# Both storage accounts are locked down to private endpoints and use managed
+# identities, with FSLogix SMB access granted to the configured Entra group.
 
 data "azurerm_private_dns_zone" "file_dns" {
   provider            = azurerm.hub
@@ -33,6 +35,8 @@ resource "azurerm_user_assigned_identity" "general" {
   tags                = var.tags
 }
 
+# AzAPI is used here to control storage account properties that can lag in the
+# AzureRM provider, especially identity-based Azure Files authentication.
 resource "azapi_resource" "fslogix_storage" {
   type      = "Microsoft.Storage/storageAccounts@2023-05-01"
   name      = var.fslogix_storage_account_name
@@ -57,6 +61,8 @@ resource "azapi_resource" "fslogix_storage" {
         minimumTlsVersion        = "TLS1_2"
         supportsHttpsTrafficOnly = true
       },
+      # Only emit the Azure Files identity auth block when an auth mode is set;
+      # AD DS properties are all-or-nothing and are validated in variables.tf.
       var.fslogix_identity_auth_directory_service != null ? {
         azureFilesIdentityBasedAuthentication = merge(
           {
@@ -155,6 +161,8 @@ resource "azurerm_private_endpoint" "general_blob" {
   }
 }
 
+# Network rules are applied after private endpoints exist so the private path is
+# available before default public network access is denied.
 resource "azurerm_storage_account_network_rules" "fslogix" {
   provider           = azurerm.spoke
   storage_account_id = azapi_resource.fslogix_storage.id
@@ -177,6 +185,7 @@ resource "azurerm_storage_account_network_rules" "general" {
   ]
 }
 
+# Grant SMB data-plane access to the group that will store FSLogix profiles.
 resource "azurerm_role_assignment" "fslogix_users" {
   provider             = azurerm.spoke
   scope                = azapi_resource.fslogix_share.id

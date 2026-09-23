@@ -1,4 +1,6 @@
-# ── AVD common service objects including resource group and Workspace ─────────────────
+# Creates common AVD service objects shared by host pools.
+# The workspace and its feed private endpoint are deployed here so host pool
+# modules can focus on app groups, session host automation, and scaling.
 
 resource "azurerm_resource_group" "service_objects" {
   location = var.avdLocation
@@ -15,7 +17,8 @@ resource "random_string" "suffix" {
   upper   = false
 }
 
-# ── Workspace (AVM v0.2.2) ────────────────────────────────────────────────────
+# AVD workspace is private-only; users reach the feed through the private
+# endpoint below rather than through public network access.
 module "avm_res_desktopvirtualization_workspace" {
   source  = "Azure/avm-res-desktopvirtualization-workspace/azurerm"
   version = "0.2.2"
@@ -28,14 +31,15 @@ module "avm_res_desktopvirtualization_workspace" {
   public_network_access_enabled                 = false
 }
 
-# ── Private DNS Zone for AVD Workspace feed (pre-existing in hub) ────────────
+# The private DNS zone is owned by the hub subscription and must already exist.
 data "azurerm_private_dns_zone" "avd_feed_dns" {
   provider            = azurerm.hub
   name                = "privatelink.wvd.microsoft.com"
   resource_group_name = var.hub_dns_zone_rg
 }
 
-# ── Workspace Private Endpoint (feed) ───────────────────────────────────
+# The feed subresource publishes the workspace feed privately through the spoke
+# private endpoint subnet while registering DNS records in the hub zone.
 resource "azurerm_private_endpoint" "workspace_pe" {
   name                = var.workspace_pe_name
   resource_group_name = azurerm_resource_group.service_objects.name

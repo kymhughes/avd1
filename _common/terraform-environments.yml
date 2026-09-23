@@ -2,10 +2,10 @@ parameters:
   tfFolder: ''
   doDestroy: false
   deployNpd: true
-  deployTst: false
+  deployUat: false
   deployPrd: false
   npdAzureServiceConnection: sp-avd-lab
-  tstAzureServiceConnection: sp-avd-lab-tst
+  uatAzureServiceConnection: sp-avd-lab-uat
   prdAzureServiceConnection: sp-avd-lab-prd
 
 stages:
@@ -23,17 +23,17 @@ stages:
           terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/${{ parameters.tfFolder }}
           runStage: true
 
-  - ${{ if eq(parameters.deployTst, true) }}:
+  - ${{ if eq(parameters.deployUat, true) }}:
       - template: terraform-plan-apply.yml
         parameters:
-          stageName: TST
-          environmentName: tst
-          variableTemplate: ../_environment/vars-tst.yml
-          azureServiceConnection: ${{ parameters.tstAzureServiceConnection }}
+          stageName: UAT
+          environmentName: uat
+          variableTemplate: ../_environment/vars-uat.yml
+          azureServiceConnection: ${{ parameters.uatAzureServiceConnection }}
           doDestroy: ${{ parameters.doDestroy }}
-          backendStateKey: tst-${{ parameters.tfFolder }}.tfstate
-          terraformCommonVarFile: ../_environment/tst.tfvars
-          terraformVarFile: tst.tfvars
+          backendStateKey: uat-${{ parameters.tfFolder }}.tfstate
+          terraformCommonVarFile: ../_environment/uat.tfvars
+          terraformVarFile: uat.tfvars
           terraformWorkingDirectory: $(System.DefaultWorkingDirectory)/${{ parameters.tfFolder }}
           runStage: true
 
