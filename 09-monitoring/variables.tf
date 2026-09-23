@@ -50,44 +50,66 @@ variable "enable_diagnostic_policy_remediation" {
 variable "diagnostic_policy_resource_types" {
   description = "Resource types that should receive diagnostic settings through subscription policy."
   type = map(object({
-    display_name   = string
-    resource_type  = string
-    enable_logs    = optional(bool, true)
-    enable_metrics = optional(bool, true)
+    display_name      = string
+    resource_type     = string
+    log_categories    = optional(list(string), [])
+    metric_categories = optional(list(string), [])
   }))
   default = {
     storage_accounts = {
-      display_name = "Storage accounts"
-      # The storage account resource supports platform metrics; service-level logs
-      # are exposed on child services such as blobServices and fileServices.
-      resource_type = "Microsoft.Storage/storageAccounts"
-      enable_logs   = false
+      display_name      = "Storage accounts"
+      resource_type     = "Microsoft.Storage/storageAccounts"
+      metric_categories = ["Capacity", "Transaction"]
+    }
+    storage_blob_services = {
+      display_name      = "Storage blob services"
+      resource_type     = "Microsoft.Storage/storageAccounts/blobServices"
+      log_categories    = ["StorageRead", "StorageWrite", "StorageDelete"]
+      metric_categories = ["Capacity", "Transaction"]
+    }
+    storage_file_services = {
+      display_name      = "Storage file services"
+      resource_type     = "Microsoft.Storage/storageAccounts/fileServices"
+      log_categories    = ["StorageRead", "StorageWrite", "StorageDelete"]
+      metric_categories = ["Capacity", "SLI", "Transaction"]
     }
     key_vaults = {
-      display_name  = "Key Vaults"
-      resource_type = "Microsoft.KeyVault/vaults"
+      display_name      = "Key Vaults"
+      resource_type     = "Microsoft.KeyVault/vaults"
+      log_categories    = ["AuditEvent", "AzurePolicyEvaluationDetails"]
+      metric_categories = ["AllMetrics"]
     }
     avd_workspaces = {
       display_name   = "AVD workspaces"
       resource_type  = "Microsoft.DesktopVirtualization/workspaces"
-      enable_metrics = false
+      log_categories = ["Checkpoint", "Error", "Management", "Feed"]
     }
     avd_app_groups = {
       display_name   = "AVD application groups"
       resource_type  = "Microsoft.DesktopVirtualization/applicationGroups"
-      enable_metrics = false
+      log_categories = ["Checkpoint", "Error", "Management"]
     }
     avd_host_pools = {
-      display_name   = "AVD host pools"
-      resource_type  = "Microsoft.DesktopVirtualization/hostPools"
-      enable_metrics = false
+      display_name  = "AVD host pools"
+      resource_type = "Microsoft.DesktopVirtualization/hostPools"
+      log_categories = [
+        "Checkpoint",
+        "Error",
+        "Management",
+        "Connection",
+        "HostRegistration",
+        "AgentHealthStatus",
+        "NetworkData",
+        "ConnectionGraphicsData",
+        "SessionHostManagement",
+        "AutoscaleEvaluationPooled",
+        "MultiLinkAdd"
+      ]
     }
     session_host_vms = {
-      display_name = "Session host virtual machines"
-      # AVD session hosts are Azure VMs; VM diagnostic settings expose platform metrics.
-      resource_type  = "Microsoft.Compute/virtualMachines"
-      enable_logs    = false
-      enable_metrics = true
+      display_name      = "Session host virtual machines"
+      resource_type     = "Microsoft.Compute/virtualMachines"
+      metric_categories = ["AllMetrics"]
     }
   }
 }

@@ -4,12 +4,12 @@ locals {
 
   diagnostic_policy_resources = {
     for key, config in var.diagnostic_policy_resource_types : key => {
-      name           = "diag-${replace(key, "_", "-")}"
-      assignment     = "diag-${replace(key, "_", "-")}-${var.environment}"
-      display_name   = config.display_name
-      resource_type  = config.resource_type
-      enable_logs    = try(config.enable_logs, true)
-      enable_metrics = try(config.enable_metrics, true)
+      name          = "diag-${replace(key, "_", "-")}"
+      assignment    = "diag-${replace(key, "_", "-")}-${var.environment}"
+      display_name  = config.display_name
+      resource_type = config.resource_type
+      logs          = try(config.log_categories, [])
+      metrics       = try(config.metric_categories, [])
     }
   }
 }
@@ -19,7 +19,7 @@ resource "azurerm_policy_definition" "diagnostic_settings" {
 
   name         = each.value.name
   policy_type  = "Custom"
-  mode         = "Indexed"
+  mode         = "All"
   display_name = "Deploy diagnostic settings for ${each.value.display_name}"
   description  = "Deploys Azure Monitor diagnostic settings for ${each.value.resource_type} resources to the AVD Log Analytics workspace."
 
@@ -86,18 +86,18 @@ resource "azurerm_policy_definition" "diagnostic_settings" {
                     {
                       workspaceId = "[parameters('logAnalyticsWorkspaceId')]"
                     },
-                    each.value.enable_logs ? {
+                    length(each.value.logs) > 0 ? {
                       logs = [
-                        {
-                          categoryGroup = "allLogs"
-                          enabled       = true
+                        for category in each.value.logs : {
+                          category = category
+                          enabled  = true
                         }
                       ]
                     } : {},
-                    each.value.enable_metrics ? {
+                    length(each.value.metrics) > 0 ? {
                       metrics = [
-                        {
-                          category = "AllMetrics"
+                        for category in each.value.metrics : {
+                          category = category
                           enabled  = true
                         }
                       ]
