@@ -57,24 +57,30 @@ variable "diagnostic_policy_resource_types" {
   }))
   default = {
     storage_accounts = {
-      display_name  = "Storage accounts"
+      display_name = "Storage accounts"
+      # The storage account resource supports platform metrics; service-level logs
+      # are exposed on child services such as blobServices and fileServices.
       resource_type = "Microsoft.Storage/storageAccounts"
+      enable_logs   = false
     }
     key_vaults = {
       display_name  = "Key Vaults"
       resource_type = "Microsoft.KeyVault/vaults"
     }
     avd_workspaces = {
-      display_name  = "AVD workspaces"
-      resource_type = "Microsoft.DesktopVirtualization/workspaces"
+      display_name   = "AVD workspaces"
+      resource_type  = "Microsoft.DesktopVirtualization/workspaces"
+      enable_metrics = false
     }
     avd_app_groups = {
-      display_name  = "AVD application groups"
-      resource_type = "Microsoft.DesktopVirtualization/applicationGroups"
+      display_name   = "AVD application groups"
+      resource_type  = "Microsoft.DesktopVirtualization/applicationGroups"
+      enable_metrics = false
     }
     avd_host_pools = {
-      display_name  = "AVD host pools"
-      resource_type = "Microsoft.DesktopVirtualization/hostPools"
+      display_name   = "AVD host pools"
+      resource_type  = "Microsoft.DesktopVirtualization/hostPools"
+      enable_metrics = false
     }
     session_host_vms = {
       display_name = "Session host virtual machines"
