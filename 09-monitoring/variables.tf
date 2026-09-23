@@ -106,12 +106,71 @@ variable "diagnostic_policy_resource_types" {
         "MultiLinkAdd"
       ]
     }
-    session_host_vms = {
-      display_name      = "Session host virtual machines"
-      resource_type     = "Microsoft.Compute/virtualMachines"
-      metric_categories = ["AllMetrics"]
-    }
   }
+}
+
+variable "data_collection_rule_name" {
+  type        = string
+  default     = "dcr-avd-session-hosts"
+  description = "Data Collection Rule name for AVD session host guest telemetry."
+}
+
+variable "data_collection_rule_association_name" {
+  type        = string
+  default     = "dcra-avd-session-hosts"
+  description = "Data Collection Rule association name deployed to session host VMs by Azure Policy."
+}
+
+variable "enable_ama_policies" {
+  type        = bool
+  default     = true
+  description = "Enable subscription policy assignments that deploy Azure Monitor Agent and DCR associations to VMs."
+}
+
+variable "enable_ama_policy_remediation" {
+  type        = bool
+  default     = true
+  description = "Create remediation tasks for the Azure Monitor Agent and DCR association policies."
+}
+
+variable "session_host_vm_tag_name" {
+  type        = string
+  default     = "workload"
+  description = "VM tag name used by Azure Policy to identify AVD session hosts."
+}
+
+variable "session_host_vm_tag_like" {
+  type        = string
+  default     = "avd*"
+  description = "Azure Policy like-pattern used against session_host_vm_tag_name to identify AVD session hosts."
+}
+
+variable "session_host_perf_counters" {
+  type        = list(string)
+  description = "Windows performance counters collected from AVD session hosts by AMA."
+  default = [
+    "\\Processor Information(_Total)\\% Processor Time",
+    "\\Memory\\Available MBytes",
+    "\\Memory\\% Committed Bytes In Use",
+    "\\LogicalDisk(_Total)\\% Free Space",
+    "\\LogicalDisk(_Total)\\Avg. Disk sec/Read",
+    "\\LogicalDisk(_Total)\\Avg. Disk sec/Write",
+    "\\Network Interface(*)\\Bytes Total/sec",
+    "\\Terminal Services\\Active Sessions",
+    "\\Terminal Services\\Inactive Sessions"
+  ]
+}
+
+variable "session_host_windows_event_logs" {
+  type        = list(string)
+  description = "Windows Event Log XPath queries collected from AVD session hosts by AMA."
+  default = [
+    "Application!*[System[(Level=1 or Level=2 or Level=3)]]",
+    "System!*[System[(Level=1 or Level=2 or Level=3)]]",
+    "Microsoft-Windows-TerminalServices-LocalSessionManager/Operational!*[System[(Level=1 or Level=2 or Level=3 or Level=4)]]",
+    "Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational!*[System[(Level=1 or Level=2 or Level=3 or Level=4)]]",
+    "Microsoft-FSLogix-Apps/Operational!*[System[(Level=1 or Level=2 or Level=3 or Level=4)]]"
+  ]
 }
 
 variable "tags" {
