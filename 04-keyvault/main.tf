@@ -45,8 +45,8 @@ module "avm_res_keyvault_vault" {
   tags                          = var.tags
   enable_telemetry              = false
   public_network_access_enabled = false
-  purge_protection_enabled      = false
-  #soft_delete_retention_days    = 90
+  purge_protection_enabled      = var.purge_protection_enabled
+  soft_delete_retention_days    = var.soft_delete_retention_days
 
   network_acls = {
     #bypass         = "None"

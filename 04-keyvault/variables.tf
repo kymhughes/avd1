@@ -84,3 +84,15 @@ variable "keyvault_sc_name" {
   type        = string
   description = "Key Vault service connection name."
 }
+
+variable "purge_protection_enabled" {
+  type        = bool
+  description = "Whether purge protection is enabled for the Key Vault."
+  default     = false
+}
+
+variable "soft_delete_retention_days" {
+  type        = number
+  description = "Number of days to retain soft-deleted Key Vault objects."
+  default     = 90
+}
