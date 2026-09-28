@@ -73,19 +73,6 @@ module "avm_res_keyvault_vault" {
     }
   }
 
-  # NOTE: CMK key creation requires data-plane access to the Key Vault.
-  # Azure Policy in this environment enforces publicNetworkAccess=Disabled, so
-  # the key must be created from within the spoke VNet (e.g. a self-hosted runner
-  # or jump box). Uncomment and run from within the network:
-  # keys = {
-  #   cmk = {
-  #     name     = "avd-cmk-key"
-  #     key_type = "RSA"
-  #     key_size = 4096
-  #     key_opts = ["decrypt", "encrypt", "sign", "unwrapKey", "verify", "wrapKey"]
-  #   }
-  # }
-
   # wait_for_rbac_before_key_operations = {
   #   create = "10s"
   # }
@@ -97,6 +84,70 @@ resource "time_sleep" "wait_for_keyvault_private_endpoint" {
 
   depends_on = [
     module.avm_res_keyvault_vault
+  ]
+}
+
+# The CMK is created after the private endpoint is available because Key Vault
+# key operations are data-plane calls and public network access is disabled.
+resource "azurerm_key_vault_key" "cmk" {
+  provider = azurerm.spoke
+
+  name         = var.cmk_key_name
+  key_vault_id = module.avm_res_keyvault_vault.resource_id
+  key_type     = "RSA"
+  key_size     = var.cmk_key_size
+  key_opts     = ["decrypt", "encrypt", "sign", "unwrapKey", "verify", "wrapKey"]
+  tags         = var.tags
+
+  rotation_policy {
+    automatic {
+      time_after_creation = var.cmk_key_rotation_time_after_creation
+    }
+
+    expire_after         = var.cmk_key_expire_after
+    notify_before_expiry = var.cmk_key_notify_before_expiry
+  }
+
+  depends_on = [
+    time_sleep.wait_for_keyvault_private_endpoint
+  ]
+}
+
+resource "azurerm_user_assigned_identity" "disk_encryption_set" {
+  provider = azurerm.spoke
+
+  name                = var.disk_encryption_set_identity_name
+  location            = var.avdLocation
+  resource_group_name = data.azurerm_resource_group.service_objects.name
+  tags                = var.tags
+}
+
+resource "azurerm_role_assignment" "disk_encryption_set_key_access" {
+  provider = azurerm.spoke
+
+  scope                = module.avm_res_keyvault_vault.resource_id
+  role_definition_name = "Key Vault Crypto Service Encryption User"
+  principal_id         = azurerm_user_assigned_identity.disk_encryption_set.principal_id
+}
+
+resource "azurerm_disk_encryption_set" "avd" {
+  provider = azurerm.spoke
+
+  name                      = var.disk_encryption_set_name
+  location                  = var.avdLocation
+  resource_group_name       = data.azurerm_resource_group.service_objects.name
+  key_vault_key_id          = azurerm_key_vault_key.cmk.versionless_id
+  auto_key_rotation_enabled = true
+  encryption_type           = "EncryptionAtRestWithCustomerKey"
+  tags                      = var.tags
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.disk_encryption_set.id]
+  }
+
+  depends_on = [
+    azurerm_role_assignment.disk_encryption_set_key_access
   ]
 }
 

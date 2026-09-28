@@ -52,6 +52,46 @@ variable "vm_local_admin_password_secret_name" {
   default     = "local-password"
 }
 
+variable "cmk_key_name" {
+  type        = string
+  description = "Key Vault key name used as the customer-managed key for AVD managed disks."
+  default     = "avd-cmk-key"
+}
+
+variable "cmk_key_size" {
+  type        = number
+  description = "RSA key size for the customer-managed key."
+  default     = 4096
+}
+
+variable "cmk_key_rotation_time_after_creation" {
+  type        = string
+  description = "ISO 8601 duration after key creation before automatic rotation occurs."
+  default     = "P12M"
+}
+
+variable "cmk_key_expire_after" {
+  type        = string
+  description = "ISO 8601 duration after key creation when each key version expires."
+  default     = "P18M"
+}
+
+variable "cmk_key_notify_before_expiry" {
+  type        = string
+  description = "ISO 8601 duration before key expiry to emit Key Vault expiry notifications."
+  default     = "P30D"
+}
+
+variable "disk_encryption_set_name" {
+  type        = string
+  description = "Disk Encryption Set name for AVD session host managed disks."
+}
+
+variable "disk_encryption_set_identity_name" {
+  type        = string
+  description = "User-assigned managed identity name used by the Disk Encryption Set to access the CMK."
+}
+
 variable "avd_service_principal_object_id" {
   type        = string
   description = "Object ID of the Azure Virtual Desktop service principal that reads session host admin secrets."
@@ -88,7 +128,7 @@ variable "keyvault_sc_name" {
 variable "purge_protection_enabled" {
   type        = bool
   description = "Whether purge protection is enabled for the Key Vault."
-  default     = false
+  default     = true
 }
 
 variable "soft_delete_retention_days" {
