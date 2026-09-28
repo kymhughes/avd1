@@ -19,6 +19,14 @@ data "azuread_group" "fslogix_users" {
   security_enabled = true
 }
 
+data "azurerm_key_vault" "storage_cmk" {
+  count = var.storage_cmk_enabled ? 1 : 0
+
+  provider            = azurerm.spoke
+  name                = var.storage_cmk_key_vault_name
+  resource_group_name = coalesce(var.storage_cmk_key_vault_resource_group_name, var.rg_so)
+}
+
 resource "azurerm_user_assigned_identity" "fslogix" {
   provider            = azurerm.spoke
   name                = var.fslogix_managed_identity_name
@@ -33,6 +41,52 @@ resource "azurerm_user_assigned_identity" "general" {
   resource_group_name = var.rg_storage_name
   location            = var.avdLocation
   tags                = var.tags
+}
+
+resource "azurerm_role_assignment" "fslogix_storage_cmk" {
+  count = var.storage_cmk_enabled ? 1 : 0
+
+  provider             = azurerm.spoke
+  scope                = data.azurerm_key_vault.storage_cmk[0].id
+  role_definition_name = "Key Vault Crypto Service Encryption User"
+  principal_id         = azurerm_user_assigned_identity.fslogix.principal_id
+}
+
+resource "azurerm_role_assignment" "general_storage_cmk" {
+  count = var.storage_cmk_enabled ? 1 : 0
+
+  provider             = azurerm.spoke
+  scope                = data.azurerm_key_vault.storage_cmk[0].id
+  role_definition_name = "Key Vault Crypto Service Encryption User"
+  principal_id         = azurerm_user_assigned_identity.general.principal_id
+}
+
+locals {
+  fslogix_storage_cmk_encryption = var.storage_cmk_enabled ? {
+    encryption = {
+      keySource = "Microsoft.Keyvault"
+      keyvaultproperties = {
+        keyname     = var.storage_cmk_key_name
+        keyvaulturi = data.azurerm_key_vault.storage_cmk[0].vault_uri
+      }
+      identity = {
+        userAssignedIdentity = azurerm_user_assigned_identity.fslogix.id
+      }
+    }
+  } : {}
+
+  general_storage_cmk_encryption = var.storage_cmk_enabled ? {
+    encryption = {
+      keySource = "Microsoft.Keyvault"
+      keyvaultproperties = {
+        keyname     = var.storage_cmk_key_name
+        keyvaulturi = data.azurerm_key_vault.storage_cmk[0].vault_uri
+      }
+      identity = {
+        userAssignedIdentity = azurerm_user_assigned_identity.general.id
+      }
+    }
+  } : {}
 }
 
 # AzAPI is used here to control storage account properties that can lag in the
@@ -75,9 +129,14 @@ resource "azapi_resource" "fslogix_storage" {
             }
           } : {}
         )
-      } : {}
+      } : {},
+      local.fslogix_storage_cmk_encryption
     )
   }
+
+  depends_on = [
+    azurerm_role_assignment.fslogix_storage_cmk
+  ]
 }
 
 resource "azapi_resource" "fslogix_share" {
@@ -110,13 +169,20 @@ resource "azapi_resource" "general_storage" {
     sku = {
       name = "Standard_LRS"
     }
-    properties = {
-      allowSharedKeyAccess     = false
-      publicNetworkAccess      = "Disabled"
-      minimumTlsVersion        = "TLS1_2"
-      supportsHttpsTrafficOnly = true
-    }
+    properties = merge(
+      {
+        allowSharedKeyAccess     = false
+        publicNetworkAccess      = "Disabled"
+        minimumTlsVersion        = "TLS1_2"
+        supportsHttpsTrafficOnly = true
+      },
+      local.general_storage_cmk_encryption
+    )
   }
+
+  depends_on = [
+    azurerm_role_assignment.general_storage_cmk
+  ]
 }
 
 resource "azurerm_private_endpoint" "fslogix_file" {

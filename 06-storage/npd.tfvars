@@ -2,6 +2,10 @@
 active_directory_domain_name = "int.local"
 active_directory_domain_guid = "fea35cd0-3ec6-4c7d-8b99-1073c5d00d19"
 
+storage_cmk_enabled        = true
+storage_cmk_key_vault_name = "kv-avd-itm-npd"
+storage_cmk_key_name       = "avd-cmk-key"
+
 fslogix_storage_account_name                 = "stavditmnpd001"
 fslogix_managed_identity_name                = "mi-avd-storage-itm-npd"
 fslogix_file_private_endpoint_name           = "pe-avd-files-itm-npd"

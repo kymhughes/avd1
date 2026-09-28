@@ -156,6 +156,37 @@ variable "fslogix_identity_auth_directory_service" {
   nullable    = true
 }
 
+variable "storage_cmk_enabled" {
+  type        = bool
+  description = "Enable customer-managed key encryption for the storage accounts."
+  default     = true
+}
+
+variable "storage_cmk_key_vault_name" {
+  type        = string
+  description = "Key Vault name containing the storage customer-managed key."
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = !var.storage_cmk_enabled || var.storage_cmk_key_vault_name != null
+    error_message = "storage_cmk_key_vault_name must be set when storage_cmk_enabled is true."
+  }
+}
+
+variable "storage_cmk_key_vault_resource_group_name" {
+  type        = string
+  description = "Resource group containing the storage CMK Key Vault. Defaults to rg_so."
+  default     = null
+  nullable    = true
+}
+
+variable "storage_cmk_key_name" {
+  type        = string
+  description = "Key Vault key name used for storage account customer-managed key encryption."
+  default     = "avd-cmk-key"
+}
+
 variable "general_storage_account_name" {
   type        = string
   description = "Name of the general-purpose storage account."
